@@ -24,4 +24,4 @@ EXPOSE 2121
 EXPOSE 60000-60100
 
 # Comando para iniciar
-CMD ["python", "main.py"]
+CMD ["python", "run_nebula.py"]

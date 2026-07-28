@@ -1,4 +1,11 @@
 .env
 __pycache__
+.venv/
 *.session*
 *_test.py
+data/
+staging/
+*.db
+*.db-shm
+*.db-wal
+*.log

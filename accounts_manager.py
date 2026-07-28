@@ -1,16 +1,14 @@
-from os import environ
 from os.path import exists
-from pymongo import MongoClient
 from pathlib import PurePosixPath
 from re import compile
+from sqlite_backend import SQLiteUserStore
 if exists(".env"):
     from dotenv import load_dotenv
     load_dotenv()
 
 login_regex = compile(r'^[a-zA-Z0-9_]{1,64}$')
 
-MONGODB = environ.get("MONGODB") or input("MongoDB connect string: ")
-db = MongoClient(MONGODB).ftp["users"]
+db = SQLiteUserStore()
 
 class Permission:
     def __init__(self, path, readable=False, writable=False):

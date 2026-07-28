@@ -1,348 +1,217 @@
-# 💾 Instalação - Python Manual
+# Instalação do Nebula Local
 
-Guia completo para instalar o Nebula FTP usando Python diretamente (sem Docker).
+Este guia prepara o Nebula Local no Windows usando SQLite. MongoDB não é necessário.
 
----
+## 1. Pré-requisitos
 
-## 📋 Requisitos
+Instale:
 
-### Sistema Operacional
-- ✅ Linux (Ubuntu 20.04+, Debian 11+, CentOS 8+)
-- ✅ Windows 10/11 (com WSL2 ou nativo)
-- ✅ macOS 12+
+- [Python 3.10 ou superior](https://www.python.org/downloads/).
+- [Git para Windows](https://git-scm.com/download/win), caso use `git clone`.
+- Um cliente FTP, como [FileZilla Client](https://filezilla-project.org/) ou [WinSCP](https://winscp.net/).
+- Telegram instalado em um telefone ou computador.
 
-### Software
-- **Python 3.10+** (obrigatório)
-- **MongoDB 5.0+** (local ou MongoDB Atlas)
-- **Git** (para clonar o repositório)
+Durante a instalação do Python, marque **Add Python to PATH**.
 
----
+Para conferir:
 
-## 🐧 Linux (Ubuntu/Debian)
-
-### 1. Instalar Dependências
-
-Atualizar sistema
-
- ```
-sudo apt update && sudo apt upgrade -y
- ```
-Instalar Python 3.10+ e ferramentas
-
- ```
-sudo apt install -y python3 python3-pip python3-venv git
-
- ```
-Verificar versão
- ```
-python3 --version # Deve ser >= 3.10
- ```
-
-### 2. Instalar MongoDB (Local)
-
-**Opção A: MongoDB Local**
-
-Importar chave GPG
- ```
-wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
- ```
-Adicionar repositório
- ```
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
- ```
-Instalar
- ```
-sudo apt update
-sudo apt install -y mongodb-org
- ```
-Iniciar e habilitar
- ```
-sudo systemctl enable --now mongod
- ```
-Verificar
- ```
-sudo systemctl status mongod
- ```
-
-
-**Opção B: MongoDB Atlas (Cloud - Recomendado)**
-
-Pule a instalação local e use o Atlas:
-1. Crie conta em https://cloud.mongodb.com
-2. Crie um cluster gratuito (M0)
-3. Copie a connection string
-
-### 3. Clonar Repositório
-Escolha um local
- ```
-cd /opt 
- ```
-Clone
- ```
-git clone https://github.com/samucamg/NebulaFTP.git
-cd NebulaFTP
- ```
-
-### 4. Criar Ambiente Virtual
-
-Criar venv
- ```
-python3 -m venv venv
- ```
-Ativar
- ```
-source venv/bin/activate
- ```
-Seu prompt mudará para: (venv) user@host:...$
-
-### 5. Instalar Dependências Python
-
-```
-pip install --upgrade pip
-pip install -r requirements.txt
+```powershell
+python --version
 ```
 
+## 2. Baixar o projeto
 
-### 6. Configurar .env
+Pelo Git:
 
-Copiar exemplo
-```
-cp .env.example .env
-```
-Editar (use nano ou vim)
-```
-nano .env
+```powershell
+git clone https://github.com/jeffbart/NebulaLocal.git
+cd NebulaLocal
 ```
 
+Também é possível baixar o ZIP no GitHub, extrair e abrir a pasta.
 
-Preencha os valores conforme o [Guia Telegram](TELEGRAM_SETUP.md).
+Não execute o projeto de dentro do ZIP sem extraí-lo.
 
-### 7. Configurar MongoDB
+## 3. Instalar as dependências
 
-```
-python setup_database.py
-```
+Dê dois cliques em:
 
-
-### 8. Criar Usuário FTP
-```
-python accounts_manager.py
+```text
+00_INSTALAR_DEPENDENCIAS.bat
 ```
 
-Exemplo:
-Username: samuel
-Password: minhasenha123
-Home path (default /samuel): [ENTER]
+Esse script:
 
+1. verifica o Python;
+2. cria o ambiente isolado `.venv`;
+3. instala as bibliotecas de `requirements.txt`.
 
-### 9. Iniciar Servidor
-```
-python main.py
-```
+Se o Windows apresentar um problema local de certificado, o instalador tenta novamente usando somente os hosts oficiais do PyPI.
 
-Você verá:
-2025-12-13 00:00:00,000 - INFO - 🤖 Inicializando 2 bots...
-2025-12-13 00:00:01,000 - INFO - ✅ Canal Principal Confirmado: Nebula FTP (ID: -1001234567890)
-2025-12-13 00:00:02,000 - INFO - 🚀 Nebula FTP v2.3 Rodando na porta 2121
-✅ **Servidor Online!**
+## 4. Preparar o Telegram
 
----
+Você precisa de:
 
-## 🪟 Windows (Nativo)
+- `API_ID`;
+- `API_HASH`;
+- token do bot;
+- ID de um canal privado.
 
-### 1. Instalar Python
+### Criar API_ID e API_HASH
 
-1. Baixe Python 3.11 de https://python.org
-2. ⚠️ **IMPORTANTE:** Marque **"Add Python to PATH"**
-3. Instale
+1. Acesse [my.telegram.org](https://my.telegram.org).
+2. Entre com seu número de telefone.
+3. Abra **API development tools**.
+4. Crie uma aplicação.
+5. Copie `api_id` e `api_hash`.
 
-### 2. Instalar MongoDB
+### Criar o bot
 
-**Opção A: MongoDB Compass (GUI)**
-- Baixe de https://www.mongodb.com/try/download/compass
-- Instale e inicie
+1. Abra o [@BotFather](https://t.me/BotFather).
+2. Envie `/newbot`.
+3. Defina nome e username terminado em `bot`.
+4. Guarde o token fornecido.
 
-**Opção B: MongoDB Atlas (Cloud - Recomendado)**
-- Mais fácil que instalar local no Windows
+### Criar o canal
 
-### 3. Instalar Git
+1. Crie um canal privado no Telegram.
+2. Adicione o bot como administrador.
+3. Permita que ele publique mensagens.
+4. Publique uma mensagem nova no canal.
 
-Baixe de https://git-scm.com/download/win
+Mais detalhes estão em [TELEGRAM_SETUP.md](TELEGRAM_SETUP.md).
 
-### 4. Clonar Repositório
+## 5. Executar o assistente do Telegram
 
-Abra **PowerShell** ou **CMD**:
+Dê dois cliques em:
 
-```
-cd C:
-git clone https://github.com/samucamg/NebulaFTP.git
-cd NebulaFTP
-```
-
-
-### 5. Criar Ambiente Virtual
-```
-python -m venv venv
-venv\Scripts\activate
+```text
+01_CONFIGURAR_TELEGRAM.bat
 ```
 
-### 6. Instalar Dependências
-```
-pip install -r requirements.txt
-```
+Informe `API_ID`, `API_HASH`, token e `CHAT_ID`.
 
-### 7. Configurar .env
+Se ainda não souber o `CHAT_ID`:
 
-Copie `.env.example` para `.env` e edite no Notepad.
+1. deixe o Nebula desligado;
+2. publique uma mensagem nova no canal;
+3. execute `DESCOBRIR_CHAT_ID.bat`;
+4. informe o token do bot.
 
-### 8. Configurar MongoDB
+Depois confirme a configuração executando:
 
-```
-python setup_database.py
-```
-
-
-### 9. Criar Usuário
-```
-python accounts_manager.py
+```text
+02_TESTAR_TELEGRAM.bat
 ```
 
-### 10. Iniciar
+As credenciais ficam no arquivo local `.env`, ignorado pelo Git.
 
-```
-python main.py
-```
+## 6. Criar o banco SQLite
 
----
+Execute:
 
-## 🍎 macOS
-
-### 1. Instalar Homebrew
-
-Se não tiver:
-
-```
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```text
+03_CRIAR_BANCO_SQLITE.bat
 ```
 
-### 2. Instalar Dependências
+O resultado esperado é semelhante a:
 
-```
-brew install python@3.11 mongodb-community git
-brew services start mongodb-community
-```
-
-
-### 3. Seguir Passos do Linux
-
-A partir do passo 3 do guia Linux, os comandos são idênticos.
-
----
-
-## 🚀 Executar como Serviço (Linux)
-
-### Criar Systemd Service
-
-```
-sudo nano /etc/systemd/system/nebulaftp.service
+```text
+SQLite pronto: ...\data\nebula.db (schema v1)
 ```
 
-Cole:
+O comando é idempotente: pode ser executado novamente quando houver atualizações de schema.
 
-```
-[Unit]
-Description=Nebula FTP Server
-After=network.target mongod.service
+## 7. Criar uma conta FTP
 
-[Service]
-Type=simple
-User=seu_usuario
-WorkingDirectory=/opt/NebulaFTP
-Environment="PATH=/opt/NebulaFTP/venv/bin"
-ExecStart=/opt/NebulaFTP/venv/bin/python /opt/NebulaFTP/main.py
-Restart=always
-RestartSec=10
+Execute:
 
-[Install]
-WantedBy=multi-user.target
-
+```text
+04_GERENCIAR_USUARIOS_FTP.bat
 ```
 
-Ativar:
-```
-sudo systemctl enable --now nebulaftp
-```
+No menu:
 
-Ver logs
-```
-sudo journalctl -u nebulaftp -f
-```
+1. escolha **Add user**;
+2. informe um login com letras, números ou `_`;
+3. informe uma senha;
+4. volte e encerre o gerenciador.
 
----
+Cada usuário recebe como diretório inicial `/<login>`.
 
-## 🔧 Configuração Avançada
+## 8. Iniciar o servidor
 
-### Alterar Porta FTP
+Execute:
 
-Em `.env`:
-PORT=2121 # Mude para qualquer porta > 1024
-
-
-### Adicionar Mais Bots (Apenas versão Pro)
-
-Crie novos bots e adicione ao `.env` separados por vírgula:
-
-BOT_TOKENS=bot1:token,bot2:token,bot3:token
-
-
-### Aumentar Performance (Melhor performance na versão Pró)
-
-MAX_WORKERS=8 # Mais workers = mais uploads simultâneos
-CHUNK_SIZE_MB=128 # Chunks maiores = menos partes por arquivo
-
-
----
-
-## ❓ Solução de Problemas
-
-### "ModuleNotFoundError: No module named 'pyrogram'"
-
-**Solução:**
-```
-source venv/bin/activate # Ative o venv primeiro!
-pip install -r requirements.txt
+```text
+INICIAR_NEBULA.bat
 ```
 
-### "Connection refused" ao conectar no FTP
+Na primeira execução, o bot pode publicar silenciosamente:
 
-**Causas possíveis:**
-1. Servidor não está rodando
-2. Firewall bloqueando porta 2121
-3. Porta já em uso
+```text
+Nebula Local conectado ao canal.
+```
 
-**Solução:**
-Verificar se porta está em uso
+Quando estiver pronto, a janela informará que o FTP está rodando na porta 2121. Não feche essa janela enquanto estiver usando o servidor.
 
-sudo netstat -tulpn | grep 2121
-Liberar no firewall
+## 9. Conectar
 
-sudo ufw allow 2121/tcp
+Use estas configurações no cliente FTP:
 
-### "Peer id invalid" nos logs
+```text
+Host: 127.0.0.1
+Porta: 2121
+Protocolo: FTP
+Criptografia: FTP simples
+Modo: Passivo
+```
 
-Veja [Guia Telegram](TELEGRAM_SETUP.md#problemas-comuns)
+Use o login e a senha criados no gerenciador.
 
----
+## 10. Firewall e rede local
 
-## 📚 Próximos Passos
+Para uso somente no mesmo computador, normalmente nenhuma regra adicional é necessária.
 
-✅ Servidor instalado!
+Para outro equipamento da rede:
 
-Agora:
-1. **[Conectar com cliente FTP](../README.md#conectando)**
-2. **[Gerenciar usuários](USER_MANAGEMENT.md)**
-3. **[Configurar backup automático](BACKUP.md)**
+1. descubra o IPv4 do computador com `ipconfig`;
+2. conecte usando esse IP;
+3. permita o Python ou a porta 2121 no Firewall do Windows quando solicitado;
+4. mantenha a rede marcada como privada;
+5. libere também o intervalo passivo configurado, se necessário.
 
----
+Não encaminhe essas portas no roteador para a internet. Use uma VPN se precisar de acesso remoto.
 
-[← Voltar ao README](../README.md)
+## Atualização
+
+Antes de atualizar, encerre o Nebula com `Ctrl+C` e faça backup de:
+
+```text
+.env
+data\nebula.db
+Nebula_MonoBot.session
+```
+
+Depois:
+
+```powershell
+git pull
+```
+
+Execute novamente:
+
+```text
+00_INSTALAR_DEPENDENCIAS.bat
+03_CRIAR_BANCO_SQLITE.bat
+```
+
+## Desinstalação
+
+Encerre o programa e remova a pasta do projeto. Antes disso, guarde `data\nebula.db` se quiser preservar metadados e contas.
+
+Revogue o token pelo BotFather caso não pretenda mais usar o bot.
+
+## Próximo passo
+
+Leia [Como usar o Nebula Local](USAGE.md).

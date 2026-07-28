@@ -1,366 +1,182 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/samucamg/NebulaFTP/refs/heads/master/img/logo_nebula_ftp.png" alt="Logo Nebula FTP" width="300px">
+<img src="img/logo_nebula_ftp.png" alt="Nebula Local" width="280">
 
-### **Transforme o Telegram em seu Armazenamento Ilimitado**
+# Nebula Local
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)](https://www.python.org)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+Servidor FTP local com armazenamento de arquivos em um canal privado do Telegram e metadados em SQLite.
 
-[🇧🇷 Português](#) | [🇺🇸 English](README-en.md)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Windows-suportado-0078D4?logo=windows)](#instalação-no-windows)
 
-[📖 Documentação](#-documentação) • [🚀 Início Rápido](#-início-rápido) • [🎥 Vídeo](#-vídeo-tutorial) • [💬 Suporte](#-suporte)
+[Instalação](docs/INSTALLATION.md) · [Como usar](docs/USAGE.md) · [Telegram](docs/TELEGRAM_SETUP.md) · [Créditos](CREDITS.md)
 
 </div>
 
----
+## Sobre o projeto
 
-## 🎯 O que é o Nebula FTP?
+O Nebula Local disponibiliza uma interface FTP para enviar e recuperar arquivos armazenados como documentos no Telegram. O envio chega primeiro à pasta local `staging` e é processado em segundo plano. Usuários, permissões, diretórios virtuais e referências das partes enviadas ficam no banco local `data/nebula.db`.
 
-**Nebula FTP** é um servidor FTP profissional que usa o **Telegram como backend de armazenamento**, oferecendo:
+Esta edição é uma adaptação do [NebulaFTP original](https://github.com/samucamg/NebulaFTP), criado por [Samuel de Sousa Santos (`@samucamg`)](https://github.com/samucamg). Consulte [Créditos e agradecimentos](CREDITS.md).
 
-- ✨ **Armazenamento Ilimitado** - Sem limites de espaço (apenas do Telegram)
-- ⚡ **Velocidade Real** - 10+ MB/s com MTProto (sem API HTTP lenta) **(Velocidade Máxima com Multi-Bot)**
-- 🔐 **Privacidade Total** - Arquivos ofuscados com UUID (modo Stealth)
-- ~~🎬 **Streaming Inteligente**~~ - Assista vídeos 4K sem baixar tudo **(Apenas no Nebula Stream)**
-- 🤖 **Multi-Bot** - Distribui carga entre vários bots automaticamente, aumentando a performance. **(Apenas na Versão Pro)**
-- 👥 **Multi-Usuário** - Sistema completo de permissões por pasta. 
-- 🐳 **Docker Ready** - Instalação em 1 comando
-- 🛡️ **Production-Grade** - Retry logic, logs, métricas e graceful shutdown
+## Principais recursos
 
----
+- Servidor FTP acessível por FileZilla, WinSCP e clientes compatíveis.
+- Arquivos armazenados em canal privado do Telegram.
+- SQLite local, sem MongoDB ou servidor de banco externo.
+- Contas FTP e permissões por diretório.
+- Upload em partes e processamento em segundo plano.
+- Persistência de metadados e recuperação após reinicialização.
+- Scripts `.bat` para instalação, configuração e inicialização no Windows.
+- Docker disponível para ambientes Linux com rede do host.
 
-## 📊 Demonstração
+## Arquitetura
 
-### Upload Turbo (Staging Local)
-Cliente FTP envia → Disco local (instantâneo) → Telegram (background)
-
-✅ Sem timeouts  
-✅ Sem travamentos  
-✅ Compatível com RaiDrive/Windows Explorer  **(Não funciona para streaming)**
-
-### Screenshots
-
-<details>
-<summary>📸 Clique para ver capturas de tela</summary>
-
-![FileZilla conectado](docs/images/screenshot_filezilla.png)
-*FileZilla transferindo 15GB de filmes*
-
-![RaiDrive montado](docs/images/screenshot_raidrive.png)
-*Drive Z: montado no Windows Explorer*
-
-</details>
-
----
-
-## 🎥 Vídeo Tutorial
-
-> 🎬 **Em breve:** Tutorial completo de instalação e configuração
-
-[![Nebula FTP Tutorial](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://youtube.com/watch?v=VIDEO_ID)
-
----
-
-## 🚀 Início Rápido
-
-### Opção 1: Docker (Recomendado) 🐳
-
-1. Aceder ao seu Servidor via SSH
- ```
-ssh seu_usuario@IP_DO_SERVIDOR
-```
-2. Atualizar o Servidor
-```
-sudo apt update && sudo apt upgrade -y
-```
-3. Instalar as Ferramentas Essenciais
-
-```
-sudo apt install git python3 python3-venv python3-pip ffmpeg -y
+```text
+Cliente FTP
+    │
+    ▼
+Nebula Local ─────► staging/
+    │                  │
+    │                  ▼
+    │             trabalhadores de upload
+    │                  │
+    ├── SQLite         └────► canal privado do Telegram
+    │   usuários              partes dos arquivos
+    │   permissões
+    │   metadados
+    │
+    └── porta FTP 2121
 ```
 
-4. Clone o repositório
- ```
-git clone https://github.com/samucamg/NebulaFTP.git
-cd NebulaFTP
- ```
-5. Configure o .env
- ```
-cp .env.example .env
-nano .env # Preencha seus dados
- ```
-6. Inicie!
+## Requisitos
+
+- Windows 10 ou 11.
+- Python 3.10 ou superior disponível no `PATH`.
+- Conta do Telegram.
+- `API_ID` e `API_HASH` obtidos em [my.telegram.org](https://my.telegram.org).
+- Bot criado no [@BotFather](https://t.me/BotFather).
+- Canal privado com o bot adicionado como administrador.
+- Cliente FTP, como FileZilla ou WinSCP.
+
+## Instalação no Windows
+
+Clone o repositório:
+
+```powershell
+git clone https://github.com/jeffbart/NebulaLocal.git
+cd NebulaLocal
 ```
-docker-compose up -d
+
+Depois execute, nesta ordem:
+
+1. `00_INSTALAR_DEPENDENCIAS.bat`
+2. `01_CONFIGURAR_TELEGRAM.bat`
+3. `DESCOBRIR_CHAT_ID.bat`, caso ainda não saiba o ID do canal
+4. `02_TESTAR_TELEGRAM.bat`
+5. `03_CRIAR_BANCO_SQLITE.bat`
+6. `04_GERENCIAR_USUARIOS_FTP.bat`
+7. `INICIAR_NEBULA.bat`
+
+O procedimento detalhado está em [docs/INSTALLATION.md](docs/INSTALLATION.md).
+
+## Início rápido
+
+Após criar pelo menos um usuário FTP, execute:
+
+```text
+INICIAR_NEBULA.bat
 ```
-7. Veja os logs
+
+Conecte o cliente FTP:
+
+```text
+Host: 127.0.0.1
+Porta: 2121
+Protocolo: FTP
+Criptografia: FTP simples
+Modo de transferência: Passivo
+Usuário: conta criada no gerenciador
+Senha: senha criada no gerenciador
 ```
-docker-compose logs -f nebulaftp
-```
 
-**📖 [Guia Completo Docker →](docs/DOCKER.md)**
+Para instruções de envio, download, encerramento e solução de problemas, consulte [docs/USAGE.md](docs/USAGE.md).
 
----
+## Configuração
 
-### Opção 2: Python Direto 🐍
+O arquivo `.env` é criado pelo assistente e não deve ser publicado. As principais opções são:
 
-1. Clone e prepare ambiente
- ```
-git clone https://github.com/samucamg/NebulaFTP.git
-cd NebulaFTP
-python3 -m venv venv
-source venv/bin/activate # Windows: venv\Scripts\activate
- ```
-2. Instale dependências
- ```
-pip install -r requirements.txt
- ```
-3. Configure
- ```
-cp .env.example .env
-nano .env
- ```
-4. Rode
- ```
-python main.py
- ```
-
-**📖 [Guia Instalação Completa →](docs/INSTALLATION.md)**
-
----
-
-## 📖 Documentação
-
-### 🎓 Para Iniciantes
-
-1. **[📱 Configurar Telegram](docs/TELEGRAM_SETUP.md)**
-   - Obter API ID e API Hash
-   - Criar bots com @BotFather
-   - Criar canais e adicionar bots como admin
-
-2. **[💾 Instalação Python](docs/INSTALLATION.md)**
-   - Windows, Linux, macOS
-   - Passo a passo detalhado
-   - Solução de problemas
-
-3. **[🐳 Instalação Docker](docs/DOCKER.md)**
-   - Docker Desktop (Windows/Mac)
-   - Docker Engine (Linux)
-   - docker-compose explicado
-
-4. **[👥 Gerenciar Usuários](docs/USER_MANAGEMENT.md)**
-   - Criar contas FTP
-   - Permissões (leitura/escrita)
-   - Limitar acesso por pasta
-
----
-
-### 🏗️ Ecossistema Nebula
-
-O **Nebula FTP** faz parte de um ecossistema maior:
-
-| Projeto | Descrição | Status |
-|---------|-----------|--------|
-| **[NebulaFTP](docs/ECOSYSTEM.md#-nebulaftp)** | Servidor FTP com Telegram | ✅ **Você está aqui** |
-| **[NebulaStream](docs/ECOSYSTEM.md#-nebulastreaming)** | Interface Web + Player | 🚧 Em desenvolvimento |
-| **[NebulaWebDAV](docs/ECOSYSTEM.md#%EF%B8%8F-nebulawebdav)** | Servidor WebDAV para Kodi/Plex | 🚧 Em desenvolvimento |
-| **[NebulaSFTP](docs/ECOSYSTEM.md#-nebulasftp)** | Servidor SFTP (SSH) | 📋 Planejado |
-
-**📖 [Saiba mais sobre o Ecossistema →](docs/ECOSYSTEM.md)**
-
----
-
-## ⚙️ Configuração (.env)
-
-API do Telegram (obtenha em my.telegram.org)
- ```
+```dotenv
 API_ID=12345678
-API_HASH=abc123def456...
-Tokens dos Bots (crie com @BotFather)
-
-BOT_TOKENS=1234567890:AABBcc...,9876543210:AAFFdd...
-IDs dos Canais (copie de @userinfobot)
-
+API_HASH=0123456789abcdef0123456789abcdef
+BOT_TOKENS=1234567890:token_do_bot
 CHAT_ID=-1001234567890
-BACKUP_CHAT_ID=-1009876543210 # Opcional
-MongoDB (local ou Atlas)
 
-MONGODB=mongodb://localhost:27017
-Servidor FTP
-
+SQLITE_PATH=data/nebula.db
 HOST=0.0.0.0
 PORT=2121
-Performance
+PASSIVE_PORTS=60000-60100
 
-MAX_WORKERS=4 # Workers de upload
-CHUNK_SIZE_MB=64 # Tamanho dos chunks
-MAX_RETRIES=5 # Tentativas de retry
-Logging
+MAX_WORKERS=4
+CHUNK_SIZE_MB=64
+MAX_RETRIES=5
+MAX_STAGING_AGE=3600
+LOG_LEVEL=INFO
+```
 
-LOG_LEVEL=INFO # DEBUG, INFO, WARNING, ERROR
+Nunca publique `.env`, tokens, `API_HASH`, arquivos `.session`, `nebula.db` ou logs. Esses itens já estão cobertos pelo `.gitignore`.
 
- ```
+## Dados importantes
 
-**📖 [Configuração Avançada →](docs/INSTALLATION.md#configuração-avançada)**
+| Caminho | Finalidade |
+|---|---|
+| `data/nebula.db` | Usuários, permissões e metadados |
+| `staging/` | Arquivos temporários aguardando upload |
+| `Nebula_MonoBot.session` | Sessão do Pyrogram |
+| `.env` | Credenciais e configurações |
+| `nebula.log` | Registro de execução |
 
----
+Faça backup de `data/nebula.db` e preserve o canal do Telegram. Sem o banco, o Nebula perde a relação entre os nomes virtuais e os documentos armazenados.
 
-## 🎯 Casos de Uso
+## Segurança e limitações
 
-### 🏠 Uso Pessoal
-- Backup automático de fotos/vídeos
-- Biblioteca de filmes/séries pessoal
-- Sincronização entre dispositivos
+- FTP simples não criptografa usuário, senha ou conteúdo em trânsito. Use-o apenas no computador local ou em uma rede confiável.
+- Para acesso pela internet, prefira VPN; não exponha diretamente a porta FTP.
+- O Telegram é um serviço externo sujeito a limites, disponibilidade e termos próprios.
+- Não trate esta solução como cópia única de arquivos importantes.
+- A senha FTP segue o comportamento do projeto original e é armazenada localmente. Proteja o arquivo SQLite e a conta do Windows.
 
-### 🏢 Uso Profissional
-- Servidor de arquivos para equipe pequena
-- Backup de projetos e documentos
-- Streaming de conteúdo educacional
+## Desenvolvimento
 
-### 🎓 Educacional
-- Distribuição de materiais didáticos
-- Repositório de aulas gravadas
-- Compartilhamento de e-books
+Execute a suíte de testes:
 
----
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
 
-## 🔧 Recursos Técnicos
+O schema é criado e atualizado por:
 
-### Arquitetura
+```powershell
+.\.venv\Scripts\python.exe setup_database.py
+```
 
-┌─────────────────────────────────────────────┐
-│ Cliente FTP (FileZilla) │
-└─────────────────┬───────────────────────────┘
-│
-┌─────────────────▼───────────────────────────┐
-│ Nebula FTP Server (Python) │
-│ ┌──────────────────────────────────────┐ │
-│ │ - Multi-Bot Manager (Round Robin) │ │
-│ │ - Smart Seek (Streaming) │ │
-│ │ - Retry Logic (5x + Backoff) │ │
-│ │ - Garbage Collector (Auto-Clean) │ │
-│ └──────────────────────────────────────┘ │
-└─────────────────┬───────────────────────────┘
-│
-┌─────────┴─────────┐
-│ │
-┌───────▼────────┐ ┌───────▼────────┐
-│ MongoDB │ │ Telegram │
-│ (Metadados) │ │ (Arquivos) │
-└────────────────┘ └────────────────┘
+## Contribuições
 
+Issues e pull requests são bem-vindos. Antes de enviar uma alteração:
 
-### Tecnologias
+1. Não inclua credenciais, sessões, bancos ou arquivos de staging.
+2. Execute todos os testes.
+3. Explique o comportamento alterado.
+4. Atualize a documentação quando necessário.
 
-- **Python 3.10+** - Linguagem principal
-- **Pyrogram** - Cliente MTProto (rápido)
-- **pyftpdlib** - Servidor FTP assíncrono
-- **Motor** - Driver MongoDB assíncrono
-- **aiofiles** - I/O assíncrono de arquivos
-- **Docker** - Containerização
+## Licença
 
----
+Distribuído sob a [Licença MIT](LICENSE). Os avisos de autoria e licença do trabalho anterior devem ser preservados em cópias e trabalhos derivados.
 
-## 🤝 Contribuindo
+## Agradecimentos
 
-Contribuições são bem-vindas! Veja nosso [Guia de Contribuição](CONTRIBUTING.md).
+Obrigado a **Samuel de Sousa Santos (`@samucamg`)** por criar e compartilhar publicamente o NebulaFTP, que tornou esta adaptação possível. Agradecemos também a RuslanUC, cujo aviso de copyright consta na licença herdada, e aos mantenedores das bibliotecas de código aberto utilizadas pelo projeto.
 
-### Como ajudar:
-- 🐛 Reportar bugs
-- 💡 Sugerir melhorias
-- 📝 Melhorar documentação
-- 🌍 Traduzir para outros idiomas
-- ⭐ Dar uma estrela no projeto!
-
----
-
-## 📜 Licença
-
-Este projeto está sob a licença MIT. Veja [LICENSE](LICENSE) para detalhes.
-
----
-
-## 💬 Suporte
-
-### 💬 Comunidade
-- **Telegram:** [t.me/NebulaFTP](https://t.me/NebulaFTP)
-- **Discord:** [discord.gg/nebula](https://discord.gg/nebula)
-
-### 🐛 Bugs e Sugestões
-- **Issues:** [GitHub Issues](https://github.com/samucamg/NebulaFTP/issues)
-- **Discussões:** [GitHub Discussions](https://github.com/samucamg/NebulaFTP/discussions)
-
-### 📧 Contato Direto
-- **Email:** samuel@inglescurso.com.br  apenas para assuntos comerciais, não dou suporte, não tiro dúvidas.  Atendo apenas comercialmente.
-
----
-
-## 🌟 Agradecimentos
-
-Agradecimentos especiais a minha esposa e meu filho por aguentarem as longas horas de trabalho e desenvolvimento.
-
----
-
-## 📊 Estatísticas
-
-![GitHub Stars](https://img.shields.io/github/stars/samucamg/NebulaFTP?style=social)
-![GitHub Forks](https://img.shields.io/github/forks/samucamg/NebulaFTP?style=social)
-![GitHub Issues](https://img.shields.io/github/issues/samucamg/NebulaFTP)
-![GitHub Pull Requests](https://img.shields.io/github/issues-pr/samucamg/NebulaFTP)
-
----
-
-<div align="center">
-
-**Feito com ❤️ por [Samuel de Sousa Santos](https://github.com/samucamg)**
-
-[⬆ Voltar ao topo](#-nebula-ftp)
-
-</div>
-
-
-![SamucaFtp bash](https://i.imgur.com/PNNrmwA.jpg)
-
-<details>
-<summary><b>Você necessita configurar as variáveis abaixo:</b></summary>
-
-`API_ID`: Acesse [my.telegram.org](https://my.telegram.org) para obter o seu.
-
-`API_HASH`: Acesse [my.telegram.org](https://my.telegram.org) para obter o seu.
-
-`BOT_TOKEN`: Crie um novo bot utilizando [BotFather](https://telegram.dog/botfather).
-
-`MONGODB`: Crie um DB e obtenha o link de conexão em [mongodb.com] (https://www.mongodb.com/)
-
-`CHAT_ID`: Id do Chat para onde serão enviados os arquivos.
-
-`HOST`: Host do FTP deixe como padrão (Padrão: 0.0.0.0).
-
-`PORT`: Porta do servidor FTP (Padrão: 9021).
-
-</details>
-
-<details>
-<summary><b>Setup:</b></summary>
-Antes de iniciar o setup, verifique se você tem o python3 instalado, ou instale utilizando o comando abaixo:
- ```sudo apt update && sudo apt install python3-pip -y ```
-A seguir:
-
-  1. Crie um novo bot em [BotFather](https://telegram.dog/botfather).
-  2. Obtenha o API_ID e API_HASH em [my.telegram.org](https://my.telegram.org).
-  3. Crie um banco de dados Mongo DB com o nome de ftp [MongoDB Cloud](https://cloud.mongodb.com/) (ou use seu servidor) e copie a string de conexão.
-Aprenda aqui, [Como Criar gratuitamente sua base de dados Mongo DB] (https://www.youtube.com/watch?v=6b3YH0kK3ig)
-  Caso pretenda utilizar uma quantidade muito grande de arquivos, é preferível criar o seu próprio banco de dados Mongo-db veja o tutorial sobre [Como instalar e Criar sua base de dados Mongo DB no ubuntu 20.04] (https://www.digitalocean.com/community/tutorials/how-to-install-mongodb-on-ubuntu-20-04-pt)
-  4. Coloque todas as variáveis em na raiz do bot no arquivo .env
-  5. Adicione o bot ao seu canal com direito de administrador.
-  6. Execute o arquivo 'python3 get_channel_id.py`, envie o comando `/id` no seu canal para obter o id do canal.
-  7. Copie o ID para .env
-  8. Execute 'python3 setup_database.py`.
-  9. Execute 'python3 accounts_manager.py` para criar sua conta ftp.
-  10. Execute `main.py`.
-
-</details>
-<summary>Aconselho a utilização de Uma VPS ou windows com wsl2 com <b>Ubuntu 22.04</b></summary>
+Leia a atribuição completa em [CREDITS.md](CREDITS.md).
