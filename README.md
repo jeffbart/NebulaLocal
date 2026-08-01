@@ -27,8 +27,8 @@ Esta edição é uma adaptação do [NebulaFTP original](https://github.com/samu
 - Arquivos armazenados em canal privado do Telegram.
 - SQLite local, sem MongoDB ou servidor de banco externo.
 - Contas FTP e permissões por diretório.
-- Upload em partes e processamento em segundo plano.
-- Persistência de metadados e recuperação após reinicialização.
+- Upload em partes, processamento em segundo plano e liberação progressiva do disco.
+- Persistência de cada parte confirmada e retomada segura após interrupção.
 - Scripts `.bat` para instalação, configuração e inicialização no Windows.
 - Docker disponível para ambientes Linux com rede do host.
 
@@ -40,8 +40,8 @@ Cliente FTP
     ▼
 Nebula Local ─────► staging/
     │                  │
-    │                  ▼
-    │             trabalhadores de upload
+    │                  ▼  parte confirmada
+    │             trabalhadores de upload ──► libera espaço local
     │                  │
     ├── SQLite         └────► canal privado do Telegram
     │   usuários              partes dos arquivos
@@ -133,7 +133,7 @@ Nunca publique `.env`, tokens, `API_HASH`, arquivos `.session`, `nebula.db` ou l
 | Caminho | Finalidade |
 |---|---|
 | `data/nebula.db` | Usuários, permissões e metadados |
-| `staging/` | Arquivos temporários aguardando upload |
+| `staging/` | Arquivos temporários; o espaço é liberado progressivamente durante o upload |
 | `Nebula_MonoBot.session` | Sessão do Pyrogram |
 | `.env` | Credenciais e configurações |
 | `nebula.log` | Registro de execução |

@@ -10,7 +10,7 @@ INICIAR_NEBULA.bat
 
 Mantenha a janela aberta. Para encerrar corretamente, pressione `Ctrl+C` e aguarde a mensagem de desligamento.
 
-Evite encerrar à força durante um upload. O arquivo pode permanecer em `staging` e ser retomado ou detectado na próxima execução.
+Evite encerrar à força durante um upload. As partes já confirmadas ficam registradas no SQLite e o restante do arquivo pode permanecer em `staging` para retomada.
 
 ## Conectar pelo FileZilla
 
@@ -40,9 +40,12 @@ O fluxo é:
 
 1. o cliente transfere para a pasta local `staging`;
 2. o Nebula registra o arquivo no SQLite;
-3. trabalhadores enviam as partes ao canal do Telegram;
-4. o status muda para concluído;
-5. o arquivo temporário pode ser removido.
+3. trabalhadores enviam as partes ao canal do Telegram, do final para o início;
+4. cada parte confirmada é registrada no SQLite antes de ser removida do disco;
+5. o tamanho ocupado em `staging` diminui progressivamente;
+6. após a confirmação da última parte, o status muda para concluído e o arquivo temporário é removido.
+
+O envio em ordem inversa não altera o arquivo baixado: os metadados preservam a ordem original das partes. Se o processo for interrompido depois de uma confirmação, o Nebula reutiliza o registro persistido e não depende dos bytes locais que já foram liberados.
 
 Não apague arquivos manualmente de `staging` enquanto o Nebula estiver processando.
 
@@ -148,6 +151,8 @@ Depois use a mesma porta no cliente FTP.
 - Confirme a conexão com o Telegram.
 - Verifique espaço livre local.
 - Consulte erros de upload e tentativas no log.
+
+Durante um upload normal, o tamanho do arquivo em `staging` diminui a cada parte confirmada. Um arquivo que não diminui pode indicar falha no Telegram, no banco ou na permissão de escrita da pasta.
 
 ### Banco indisponível
 
