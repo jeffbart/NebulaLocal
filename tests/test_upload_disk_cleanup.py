@@ -40,15 +40,26 @@ class FakeBot:
 
 
 class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
+    def test_display_filename_only_removes_internal_hex_prefix(self):
+        self.assertEqual(
+            main.display_filename("7e61363d2ef04b099d4d3034c3d50a4f_filme.mkv"),
+            "filme.mkv",
+        )
+        self.assertEqual(
+            main.display_filename("backup_2026_filme.mkv"),
+            "backup_2026_filme.mkv",
+        )
+
     async def test_reclaims_each_confirmed_part_and_keeps_metadata_ordered(self):
         with tempfile.TemporaryDirectory() as directory:
-            local_path = os.path.join(directory, "arquivo.bin")
+            internal_filename = "7e61363d2ef04b099d4d3034c3d50a4f_arquivo.bin"
+            local_path = os.path.join(directory, internal_filename)
             with open(local_path, "wb") as stream:
                 stream.write(b"0123456789")
 
             document = {
                 "_id": 1,
-                "name": "arquivo.bin",
+                "name": internal_filename,
                 "parent": "/user",
                 "size": 10,
                 "parts": [],
@@ -57,7 +68,7 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
             bot = FakeBot(local_path)
             await main.UPLOAD_QUEUE.put({
                 "path": local_path,
-                "filename": "arquivo.bin",
+                "filename": internal_filename,
                 "parent": "/user",
                 "size": 10,
             })

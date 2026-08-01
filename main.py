@@ -7,6 +7,7 @@ import io
 import aiofiles
 import signal
 import math
+import re
 from logging.handlers import RotatingFileHandler
 from os import environ
 from os.path import exists
@@ -76,6 +77,10 @@ def format_file_size(size_bytes):
             formatted = f"{size:.2f}".rstrip("0").rstrip(".")
             return f"{formatted} {unit}"
         size /= 1024
+
+def display_filename(filename):
+    """Remove apenas o prefixo hexadecimal interno criado no staging."""
+    return re.sub(r"^[0-9a-fA-F]{32}_", "", filename, count=1)
 
 async def stats_reporter():
     while True: await asyncio.sleep(300); Metrics.report()
@@ -283,8 +288,9 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         )
                         uploaded_bytes = min(total_size, confirmed_bytes + len(chunk_data))
                         uploaded_percent = (uploaded_bytes / total_size * 100) if total_size else 100
+                        visible_filename = display_filename(filename)
                         telegram_caption = (
-                            f"Arquivo: {filename}\n"
+                            f"Arquivo: {visible_filename}\n"
                             f"Parte: {part_label} de {total_label}\n"
                             f"Tamanho total: {format_file_size(total_size)}\n"
                             f"Enviado: {format_file_size(uploaded_bytes)} de "

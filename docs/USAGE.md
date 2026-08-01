@@ -66,6 +66,8 @@ O envio em ordem inversa não altera o arquivo baixado: os metadados preservam a
 
 Cada documento publicado no canal recebe uma legenda com o nome original, a numeração, o tamanho total e o progresso acumulado do upload. Como o envio ocorre do final para o início, a primeira mensagem pode mostrar `Parte: 13 de 13`; isso é esperado, enquanto o campo `Enviado` cresce normalmente até 100%.
 
+Identificadores hexadecimais usados internamente na pasta `staging` são ocultados da legenda. Assim, um nome interno como `7e61363d2ef04b099d4d3034c3d50a4f_filme.mkv` aparece no canal apenas como `filme.mkv`.
+
 Não apague arquivos manualmente de `staging` enquanto o Nebula estiver processando.
 
 ## Baixar arquivos
