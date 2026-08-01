@@ -1,10 +1,12 @@
 from locale import LC_ALL, setlocale as _setlocale
 from threading import Lock
 from contextlib import contextmanager
-from asyncio import IncompleteReadError, Queue
+from asyncio import Event, IncompleteReadError, Queue
 
 # ADICIONADO: Fila Global de Upload
 UPLOAD_QUEUE = Queue()
+DISK_SPACE_AVAILABLE = Event()
+DISK_SPACE_AVAILABLE.set()
 
 __all__ = (
     "StreamIO",
@@ -12,6 +14,7 @@ __all__ = (
     "AbstractAsyncLister",
     "setlocale",
     "UPLOAD_QUEUE", # Exportar a fila
+    "DISK_SPACE_AVAILABLE",
 )
 
 class AsyncStreamIterator:
@@ -22,6 +25,9 @@ class AsyncStreamIterator:
         return self
 
     async def __anext__(self):
+        # All FTP data streams stop consuming network bytes while the staging
+        # disk is below its configured reserve.
+        await DISK_SPACE_AVAILABLE.wait()
         data = await self.read_coro()
         if data:
             return data

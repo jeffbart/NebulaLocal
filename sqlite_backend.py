@@ -122,7 +122,18 @@ class SQLiteFilesCollection:
 
     def find(self, query: dict[str, Any]) -> AsyncCursor:
         with self.lock:
-            if set(query).issubset({"parent", "name"}) and "parent" in query:
+            if set(query) == {"status"}:
+                status_filter = query["status"]
+                statuses = status_filter.get("$in", []) if isinstance(status_filter, dict) else [status_filter]
+                if not statuses:
+                    rows = []
+                else:
+                    placeholders = ", ".join("?" for _ in statuses)
+                    rows = self.connection.execute(
+                        f"SELECT * FROM nodes WHERE status IN ({placeholders}) ORDER BY mtime, name COLLATE NOCASE",
+                        list(statuses),
+                    ).fetchall()
+            elif set(query).issubset({"parent", "name"}) and "parent" in query:
                 sql = "SELECT * FROM nodes WHERE parent = ?"
                 parameters: list[Any] = [query["parent"]]
                 name_filter = query.get("name")

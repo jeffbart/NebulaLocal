@@ -12,7 +12,7 @@ import logging
 
 from .errors import PathIOError
 from .tg import File
-from .common import UPLOAD_QUEUE
+from .common import DISK_SPACE_AVAILABLE, UPLOAD_QUEUE
 
 # Usa o logger configurado no main.py
 logger = logging.getLogger("NebulaFTP")
@@ -59,7 +59,8 @@ class MongoDBMemoryIO:
         self._node = node; self._mode = mode; self._tg = tg; self._db = db
         self.offset = 0
         safe_name = f"{uuid4().hex}_{node.name}"
-        self.local_path = os.path.join(CACHE_DIR, safe_name)
+        self.partial_path = os.path.join(CACHE_DIR, safe_name + ".partial")
+        self.local_path = os.path.join(CACHE_DIR, safe_name + ".ftpready")
 
     async def __aenter__(self): return self
     async def __aexit__(self, *args, **kwargs): pass
@@ -67,11 +68,23 @@ class MongoDBMemoryIO:
 
     async def write_stream(self, stream):
         logger.info(f"📥 [FTP] Recebendo: {self._node.name}")
-        async with aiofiles.open(self.local_path, "wb") as f:
-            if self.offset > 0: await f.seek(self.offset)
-            async for data in stream.iter_by_block(1024*1024):
-                await f.write(data)
-            await f.flush()
+        try:
+            async with aiofiles.open(self.partial_path, "wb") as f:
+                if self.offset > 0: await f.seek(self.offset)
+                async for data in stream.iter_by_block(1024*1024):
+                    await DISK_SPACE_AVAILABLE.wait()
+                    await f.write(data)
+                await f.flush()
+
+            # A promocao atomica torna o arquivo visivel apenas depois que a
+            # transferencia FTP inteira tiver terminado.
+            os.replace(self.partial_path, self.local_path)
+        except BaseException:
+            try:
+                os.remove(self.partial_path)
+            except FileNotFoundError:
+                pass
+            raise
         
         final_size = os.path.getsize(self.local_path)
         if final_size == 0: return

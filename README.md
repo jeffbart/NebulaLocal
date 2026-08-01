@@ -142,7 +142,31 @@ MAX_WORKERS=4
 CHUNK_SIZE_MB=64
 MAX_RETRIES=5
 MAX_STAGING_AGE=3600
+MIN_FREE_DISK_GB=20
 LOG_LEVEL=INFO
+```
+
+`MIN_FREE_DISK_GB` define a reserva mínima do disco que contém `staging/`. Quando o espaço livre fica abaixo desse valor, o Nebula pausa a entrada de dados pelo FTP. Os uploads já enfileirados continuam sendo enviados ao Telegram e liberam espaço progressivamente; ao recuperar a reserva, o recebimento FTP é retomado automaticamente.
+
+## Comandos do bot
+
+Envie estes comandos ao bot do Nebula no Telegram:
+
+- `/queue` — mostra uploads em processamento, aguardando e com falha;
+- `/fetch` — envia o relatório completo dos uploads com falha;
+- `/clearfailed` — mostra o aviso antes da limpeza;
+- `/clearfailed confirmar` — remove todos os uploads com falha e seus arquivos temporários locais;
+- `/help` — mostra as instruções dos comandos.
+
+Uploads são divididos e enviados fisicamente do fim para o início, permitindo liberar o disco progressivamente. A numeração exibida na legenda, porém, segue a ordem de envio: a primeira mensagem aparece como `Parte: 01 de NN` e a contagem cresce até `NN de NN`.
+
+Exemplo de legenda:
+
+```text
+Arquivo: Godzilla vs. Mothra - 1992 - Tri Áudio - 1080p-RMZ.mkv
+Parte: 41 de 52
+Tamanho total: 3.21 GB
+Enviado: 725 MB de 3.21 GB (22.1%)
 ```
 
 Nunca publique `.env`, tokens, `API_HASH`, arquivos `.session`, `nebula.db` ou logs. Esses itens já estão cobertos pelo `.gitignore`.

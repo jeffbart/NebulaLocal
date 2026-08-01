@@ -50,6 +50,13 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
             "backup_2026_filme.mkv",
         )
 
+    def test_folder_watcher_ignores_ftp_files_until_direct_queueing(self):
+        internal = "1790e6bb482b4a528d09132100e5654c_filme.mp4"
+        self.assertFalse(main.is_watcher_candidate(internal))
+        self.assertFalse(main.is_watcher_candidate(internal + ".partial"))
+        self.assertFalse(main.is_watcher_candidate(internal + ".ftpready"))
+        self.assertTrue(main.is_watcher_candidate("arquivo_colocado_manualmente.mp4"))
+
     async def test_reclaims_each_confirmed_part_and_keeps_metadata_ordered(self):
         with tempfile.TemporaryDirectory() as directory:
             internal_filename = "7e61363d2ef04b099d4d3034c3d50a4f_arquivo.bin"
@@ -88,11 +95,11 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 bot.captions,
                 [
-                    "Arquivo: arquivo.bin\nParte: 03 de 03\n"
+                    "Arquivo: arquivo.bin\nParte: 01 de 03\n"
                     "Tamanho total: 10 B\nEnviado: 2 B de 10 B (20.0%)",
                     "Arquivo: arquivo.bin\nParte: 02 de 03\n"
                     "Tamanho total: 10 B\nEnviado: 6 B de 10 B (60.0%)",
-                    "Arquivo: arquivo.bin\nParte: 01 de 03\n"
+                    "Arquivo: arquivo.bin\nParte: 03 de 03\n"
                     "Tamanho total: 10 B\nEnviado: 10 B de 10 B (100.0%)",
                 ],
             )

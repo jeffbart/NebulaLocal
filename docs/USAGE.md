@@ -64,11 +64,44 @@ O fluxo é:
 
 O envio em ordem inversa não altera o arquivo baixado: os metadados preservam a ordem original das partes. Se o processo for interrompido depois de uma confirmação, o Nebula reutiliza o registro persistido e não depende dos bytes locais que já foram liberados.
 
-Cada documento publicado no canal recebe uma legenda com o nome original, a numeração, o tamanho total e o progresso acumulado do upload. Como o envio ocorre do final para o início, a primeira mensagem pode mostrar `Parte: 13 de 13`; isso é esperado, enquanto o campo `Enviado` cresce normalmente até 100%.
+Cada documento publicado no canal recebe uma legenda com o nome original, a numeração, o tamanho total e o progresso acumulado do upload. Embora o envio físico ocorra do final para o início para liberar espaço progressivamente, a legenda segue a ordem das mensagens: a primeira parte enviada aparece como `Parte: 01`, e a contagem cresce até o total.
 
 Identificadores hexadecimais usados internamente na pasta `staging` são ocultados da legenda. Assim, um nome interno como `7e61363d2ef04b099d4d3034c3d50a4f_filme.mkv` aparece no canal apenas como `filme.mkv`.
 
+O formato da legenda é:
+
+```text
+Arquivo: Godzilla vs. Mothra - 1992 - Tri Áudio - 1080p-RMZ.mkv
+Parte: 41 de 52
+Tamanho total: 3.21 GB
+Enviado: 725 MB de 3.21 GB (22.1%)
+```
+
 Não apague arquivos manualmente de `staging` enquanto o Nebula estiver processando.
+
+### Reserva de espaço em disco
+
+Por padrão, o Nebula preserva pelo menos 20 GB livres no disco de `staging`. Se o espaço cair abaixo da reserva, o recebimento FTP é pausado, enquanto os arquivos já enfileirados continuam sendo enviados ao Telegram e removidos progressivamente do disco. Assim que houver novamente pelo menos 20 GB livres, o FTP retoma automaticamente.
+
+O limite pode ser alterado no `.env`:
+
+```dotenv
+MIN_FREE_DISK_GB=20
+```
+
+### Comandos do bot no Telegram
+
+- `/queue` — mostra quantos uploads estão em processamento, aguardando e com falha;
+- `/fetch` — envia a relação completa dos uploads com falha;
+- `/clearfailed` — exibe o aviso de limpeza, sem remover nada;
+- `/clearfailed confirmar` — remove os registros com falha e os respectivos arquivos temporários locais;
+- `/help` — mostra essas instruções no Telegram.
+
+Quando todas as tentativas de envio de uma parte falham, o upload recebe o status `failed` e passa a aparecer em `/queue` e `/fetch`.
+
+### Nomes com acentos
+
+O servidor anuncia e utiliza UTF-8 para nomes de arquivos e diretórios. Clientes compatíveis, como WinSCP e FileZilla, devem detectar essa configuração automaticamente. Se um cliente antigo exibir `FÃ¡brica` no lugar de `Fábrica`, force UTF-8 nas configurações de codificação de nomes do cliente e reconecte.
 
 ## Baixar arquivos
 

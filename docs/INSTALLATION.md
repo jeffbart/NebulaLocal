@@ -120,6 +120,14 @@ Depois confirme a configuração executando:
 
 As credenciais ficam no arquivo local `.env`, ignorado pelo Git.
 
+O instalador usa uma reserva mínima padrão de 20 GB no disco onde está a pasta `staging`. Confirme que o `.env` contém:
+
+```dotenv
+MIN_FREE_DISK_GB=20
+```
+
+Quando o espaço livre ficar abaixo desse limite, novas gravações FTP serão pausadas até que os uploads pendentes sejam enviados ao Telegram e removidos progressivamente do disco. A retomada é automática.
+
 ## 6. Criar o banco SQLite
 
 Execute:

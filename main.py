@@ -8,16 +8,19 @@ import aiofiles
 import signal
 import math
 import re
+import shutil
 from logging.handlers import RotatingFileHandler
 from os import environ
 from os.path import exists
 from motor.motor_asyncio import AsyncIOMotorClient
 from pyrogram import Client
+from pyrogram import filters
+from pyrogram.handlers import MessageHandler
 from pyrogram.errors import FloodWait, RPCError
 
 # Imports locais
 from ftp import Server, MongoDBUserManager, MongoDBPathIO
-from ftp.common import UPLOAD_QUEUE
+from ftp.common import DISK_SPACE_AVAILABLE, UPLOAD_QUEUE
 
 if exists(".env"):
     from dotenv import load_dotenv
@@ -30,6 +33,8 @@ CHUNK_SIZE = CHUNK_SIZE_MB * 1024 * 1024
 MAX_RETRIES = int(environ.get("MAX_RETRIES", 5))
 MAX_STAGING_AGE = int(environ.get("MAX_STAGING_AGE", 3600))
 MAX_WORKERS = int(environ.get("MAX_WORKERS", 4))
+MIN_FREE_DISK_GB = float(environ.get("MIN_FREE_DISK_GB", 20))
+MIN_FREE_DISK_BYTES = int(MIN_FREE_DISK_GB * 1024 ** 3)
 
 # Portas Passivas
 PASSIVE_PORTS = None
@@ -82,6 +87,121 @@ def display_filename(filename):
     """Remove apenas o prefixo hexadecimal interno criado no staging."""
     return re.sub(r"^[0-9a-fA-F]{32}_", "", filename, count=1)
 
+def is_watcher_candidate(filename):
+    """Return False for files managed internally by an FTP transfer."""
+    if filename.endswith((".partial", ".ftpready")):
+        return False
+    return re.match(r"^[0-9a-fA-F]{32}_", filename) is None
+
+async def disk_space_monitor(staging_dir="staging"):
+    """Pause FTP writes while free space is below the configured reserve."""
+    os.makedirs(staging_dir, exist_ok=True)
+    paused = False
+    while True:
+        try:
+            free = shutil.disk_usage(os.path.abspath(staging_dir)).free
+            should_pause = free < MIN_FREE_DISK_BYTES
+            if should_pause:
+                DISK_SPACE_AVAILABLE.clear()
+                if not paused:
+                    logger.warning(
+                        "Espaco livre abaixo de %.2f GB; recebimento FTP pausado (livre: %s).",
+                        MIN_FREE_DISK_GB, format_file_size(free),
+                    )
+            else:
+                DISK_SPACE_AVAILABLE.set()
+                if paused:
+                    logger.info("Espaco recuperado (%s); recebimento FTP retomado.", format_file_size(free))
+            paused = should_pause
+        except Exception as exc:
+            logger.error("Falha ao verificar espaco em disco: %s", exc)
+        await asyncio.sleep(2)
+
+async def _documents_by_status(mongo, statuses):
+    documents = []
+    async for document in mongo.files.find({"status": {"$in": list(statuses)}}):
+        documents.append(document)
+    return documents
+
+def _upload_line(document):
+    name = display_filename(document.get("name", "arquivo sem nome"))
+    return f"- {name} ({format_file_size(document.get('size') or 0)})"
+
+async def register_bot_commands(bot, mongo):
+    async def queue_command(_, message):
+        processing = await _documents_by_status(mongo, ("uploading",))
+        waiting = await _documents_by_status(mongo, ("staging",))
+        failed = await _documents_by_status(mongo, ("failed",))
+        await message.reply_text(
+            "Fila de uploads\n"
+            f"Em processamento: {len(processing)}\n"
+            f"Aguardando: {len(waiting)}\n"
+            f"Com falha: {len(failed)}"
+        )
+
+    async def fetch_command(_, message):
+        failed = await _documents_by_status(mongo, ("failed",))
+        if not failed:
+            await message.reply_text("Nenhum upload com falha.")
+            return
+        text = "\n".join(["Relatorio completo de uploads com falha", ""] + [
+            _upload_line(document) for document in failed
+        ])
+        for start in range(0, len(text), 4000):
+            await message.reply_text(text[start:start + 4000])
+
+    async def clearfailed_command(_, message):
+        command = (message.text or "").strip().split(maxsplit=1)
+        if len(command) < 2 or command[1].casefold() != "confirmar":
+            await message.reply_text(
+                "Aviso: esta acao remove todos os uploads com falha e seus arquivos locais.\n"
+                "Use /clearfailed confirmar para continuar."
+            )
+            return
+        failed = await _documents_by_status(mongo, ("failed",))
+        removed = 0
+        for document in failed:
+            local_path = document.get("local_path")
+            if local_path and local_path not in ACTIVE_UPLOADS and os.path.isfile(local_path):
+                try:
+                    os.remove(local_path)
+                except OSError as exc:
+                    logger.error("Nao foi possivel remover %s: %s", local_path, exc)
+                    continue
+            await mongo.files.delete_one({"_id": document["_id"]})
+            removed += 1
+        await message.reply_text(f"Uploads com falha removidos: {removed}.")
+
+    async def help_command(_, message):
+        await message.reply_text(
+            "/queue — Mostra uploads em processamento, aguardando e com falha.\n\n"
+            "/fetch — Envia um relatório completo dos uploads com falha.\n\n"
+            "/clearfailed — Mostra o aviso de limpeza.\n"
+            "/clearfailed confirmar — Remove todos os uploads com falha.\n\n"
+            "/help — Mostra estas instruções."
+        )
+
+    bot.add_handler(MessageHandler(queue_command, filters.command("queue")))
+    bot.add_handler(MessageHandler(fetch_command, filters.command("fetch")))
+    bot.add_handler(MessageHandler(clearfailed_command, filters.command("clearfailed")))
+    bot.add_handler(MessageHandler(help_command, filters.command("help")))
+
+def enable_utf8_ftp_commands(server):
+    """Advertise the UTF-8 encoding already used by the FTP control/data streams."""
+    async def feat_command(connection, rest):
+        connection.response("211", ("Features", "UTF8", "End"), True)
+        return True
+
+    async def opts_command(connection, rest):
+        if rest.strip().casefold() == "utf8 on":
+            connection.response("200", "UTF8 enabled")
+        else:
+            connection.response("501", "Only OPTS UTF8 ON is supported")
+        return True
+
+    server.commands_mapping["feat"] = feat_command
+    server.commands_mapping["opts"] = opts_command
+
 async def stats_reporter():
     while True: await asyncio.sleep(300); Metrics.report()
 
@@ -105,7 +225,7 @@ async def garbage_collector():
             if os.path.exists(staging_dir):
                 for root, dirs, files in os.walk(staging_dir):
                     for f in files:
-                        if f.endswith(".partial"): continue
+                        if not is_watcher_candidate(f): continue
                         fp = os.path.join(root, f)
 
                         # --- PROTEÇÃO CRÍTICA ---
@@ -147,7 +267,9 @@ async def folder_watcher(mongo):
         try:
             for root, dirs, files in os.walk(staging_dir):
                 for f in files:
-                    if f.endswith(".partial"): continue
+                    # Arquivos internos do FTP sao enfileirados pelo proprio
+                    # fluxo somente depois que a transferencia termina.
+                    if not is_watcher_candidate(f): continue
                     fp = os.path.join(root, f)
 
                     if not os.path.isfile(fp): continue
@@ -243,6 +365,11 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
             parts_by_id = {part["part_id"]: part for part in parts_metadata}
             upload_failed = False
 
+            await mongo.files.update_one(
+                {"_id": file_doc["_id"]},
+                {"$set": {"status": "uploading", "local_path": local_path}},
+            )
+
             try:
                 # Envia do fim para o início. Assim, cada confirmação do
                 # Telegram permite truncar imediatamente a parte confirmada e
@@ -280,7 +407,10 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         chunk_name = f"{file_uuid}.part_{part_num:03d}"
                         mem_file = io.BytesIO(chunk_data); mem_file.name = chunk_name
                         part_number_width = max(2, len(str(total_parts)))
-                        part_label = str(part_num + 1).zfill(part_number_width)
+                        # Number captions by upload order. The physical part ID
+                        # remains unchanged so downloads are reconstructed safely.
+                        send_sequence = len(parts_by_id) + 1
+                        part_label = str(send_sequence).zfill(part_number_width)
                         total_label = str(total_parts).zfill(part_number_width)
                         confirmed_bytes = sum(
                             int(part.get("file_size") or 0)
@@ -357,6 +487,12 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
             except Exception as e:
                 logger.error(f"❌ [W{worker_id}] Abortado: {filename}: {e}"); upload_failed = True; Metrics.log_fail()
 
+            if upload_failed:
+                await mongo.files.update_one(
+                    {"_id": file_doc["_id"]},
+                    {"$set": {"status": "failed", "local_path": local_path}},
+                )
+
             if not upload_failed:
                 await mongo.files.update_one(
                     {"_id": file_doc["_id"]},
@@ -416,10 +552,13 @@ async def main():
 
     MongoDBPathIO.db = mongo; MongoDBPathIO.tg = bot
     server = Server(MongoDBUserManager(mongo), MongoDBPathIO)
+    enable_utf8_ftp_commands(server)
+    await register_bot_commands(bot, mongo)
 
     asyncio.create_task(garbage_collector())
     asyncio.create_task(stats_reporter())
     asyncio.create_task(folder_watcher(mongo))
+    asyncio.create_task(disk_space_monitor())
 
     for i in range(MAX_WORKERS): asyncio.create_task(upload_worker(bot, target_chat_id, mongo, i+1))
 

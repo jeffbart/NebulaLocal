@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import main
 from ftp import MongoDBPathIO, MongoDBUserManager, Server
 from sqlite_backend import SQLiteDatabase, SQLiteUserStore
 
@@ -21,6 +22,7 @@ class FTPSQLiteIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.database = SQLiteDatabase(self.path)
         MongoDBPathIO.db = self.database
         self.server = Server(MongoDBUserManager(self.database), MongoDBPathIO)
+        main.enable_utf8_ftp_commands(self.server)
         await self.server.start("127.0.0.1", 0)
 
     async def asyncTearDown(self):
@@ -43,6 +45,21 @@ class FTPSQLiteIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(welcome.startswith("220"))
         self.assertTrue(response.startswith("230"))
         self.assertEqual(current_directory, "/alice")
+
+    async def test_server_advertises_and_accepts_utf8(self):
+        port = self.server.server_port
+
+        def negotiate_utf8():
+            client = ftplib.FTP()
+            client.connect("127.0.0.1", port, timeout=5)
+            features = client.sendcmd("FEAT")
+            response = client.sendcmd("OPTS UTF8 ON")
+            client.quit()
+            return features, response
+
+        features, response = await asyncio.to_thread(negotiate_utf8)
+        self.assertIn("UTF8", features)
+        self.assertTrue(response.startswith("200"))
 
 
 if __name__ == "__main__":
