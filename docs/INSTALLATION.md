@@ -21,14 +21,28 @@ python --version
 
 ## 2. Baixar o projeto
 
-Pelo Git:
+### Opção A: clonar pelo CMD
 
-```powershell
+1. Pressione `Windows + R`.
+2. Digite `cmd` e pressione `Enter` para abrir o Prompt de Comando.
+3. Copie as duas linhas abaixo.
+4. Clique com o botão direito dentro da janela preta do CMD para colar o comando.
+5. Pressione `Enter` e aguarde o download terminar.
+
+```bat
 git clone https://github.com/jeffbart/NebulaLocal.git
 cd NebulaLocal
 ```
 
-Também é possível baixar o ZIP no GitHub, extrair e abrir a pasta.
+A primeira linha baixa o projeto. A segunda entra na pasta `NebulaLocal`. Se aparecer a mensagem de que `git` não é reconhecido, instale o Git para Windows indicado nos pré-requisitos e repita o procedimento.
+
+### Opção B: baixar sem usar comandos
+
+1. Abra a [página do NebulaLocal no GitHub](https://github.com/jeffbart/NebulaLocal).
+2. Clique no botão verde **Code**.
+3. Clique em **Download ZIP**.
+4. Quando terminar, clique com o botão direito no ZIP e escolha **Extrair Tudo**.
+5. Abra a pasta extraída `NebulaLocal`.
 
 Não execute o projeto de dentro do ZIP sem extraí-lo.
 

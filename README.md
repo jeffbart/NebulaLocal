@@ -63,14 +63,22 @@ Nebula Local ─────► staging/
 
 ## Instalação no Windows
 
-Clone o repositório:
+Para clonar o repositório:
 
-```powershell
+1. Pressione `Windows + R`.
+2. Digite `cmd` e pressione `Enter` para abrir o Prompt de Comando.
+3. Copie as duas linhas abaixo.
+4. Clique com o botão direito dentro da janela do CMD para colar.
+5. Pressione `Enter` e aguarde o download terminar.
+
+```bat
 git clone https://github.com/jeffbart/NebulaLocal.git
 cd NebulaLocal
 ```
 
-Depois execute, nesta ordem:
+A segunda linha entra na pasta que acabou de ser baixada. Depois disso, abra essa pasta no Explorador de Arquivos para executar os arquivos `.bat` das próximas etapas.
+
+Na pasta `NebulaLocal`, execute os arquivos abaixo nesta ordem. Para executar cada um, dê dois cliques no arquivo, siga as mensagens mostradas na janela e aguarde a conclusão antes de abrir o próximo:
 
 1. `00_INSTALAR_DEPENDENCIAS.bat`
 2. `01_CONFIGURAR_TELEGRAM.bat`
