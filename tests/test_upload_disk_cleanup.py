@@ -27,9 +27,11 @@ class FakeBot:
     def __init__(self, local_path):
         self.local_path = local_path
         self.sizes_at_send = []
+        self.captions = []
 
     async def send_document(self, **kwargs):
         self.sizes_at_send.append(os.path.getsize(self.local_path))
+        self.captions.append(kwargs["caption"])
         part_id = len(self.sizes_at_send)
         return SimpleNamespace(
             id=part_id,
@@ -72,6 +74,14 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
                     await worker
 
             self.assertEqual(bot.sizes_at_send, [10, 8, 4])
+            self.assertEqual(
+                bot.captions,
+                [
+                    "Arquivo: arquivo.bin\nParte: 03 de 03",
+                    "Arquivo: arquivo.bin\nParte: 02 de 03",
+                    "Arquivo: arquivo.bin\nParte: 01 de 03",
+                ],
+            )
             self.assertFalse(os.path.exists(local_path))
             self.assertEqual(document["status"], "completed")
             self.assertEqual(document["size"], 10)

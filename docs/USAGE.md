@@ -64,6 +64,8 @@ O fluxo é:
 
 O envio em ordem inversa não altera o arquivo baixado: os metadados preservam a ordem original das partes. Se o processo for interrompido depois de uma confirmação, o Nebula reutiliza o registro persistido e não depende dos bytes locais que já foram liberados.
 
+Cada documento publicado no canal recebe uma legenda com o nome original e a numeração, por exemplo `Parte: 01 de 13`. Como o envio ocorre do final para o início, a primeira mensagem pode mostrar `Parte: 13 de 13`; isso é esperado e permite liberar progressivamente o espaço local.
+
 Não apague arquivos manualmente de `staging` enquanto o Nebula estiver processando.
 
 ## Baixar arquivos

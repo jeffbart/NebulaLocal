@@ -264,6 +264,13 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
 
                         chunk_name = f"{file_uuid}.part_{part_num:03d}"
                         mem_file = io.BytesIO(chunk_data); mem_file.name = chunk_name
+                        part_number_width = max(2, len(str(total_parts)))
+                        part_label = str(part_num + 1).zfill(part_number_width)
+                        total_label = str(total_parts).zfill(part_number_width)
+                        telegram_caption = (
+                            f"Arquivo: {filename}\n"
+                            f"Parte: {part_label} de {total_label}"
+                        )
                         sent_msg = None
 
                         for attempt in range(1, MAX_RETRIES + 1):
@@ -274,7 +281,7 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                                     document=mem_file,
                                     file_name=chunk_name,
                                     force_document=True,
-                                    caption=""
+                                    caption=telegram_caption
                                 )
                                 break
                             except FloodWait as e:
