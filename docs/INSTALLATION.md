@@ -169,6 +169,52 @@ Modo: Passivo
 
 Use o login e a senha criados no gerenciador.
 
+## Unidade FTPLOCAL opcional
+
+Se preferir acessar o Nebula pelo Explorador de Arquivos, você pode montar o FTP local como a unidade `S:` chamada `FTPLOCAL`. O FileZilla e o WinSCP continuam sendo opções; esta etapa não é obrigatória.
+
+### Pré-requisitos
+
+1. Verifique se o WinFsp já está instalado no Windows.
+2. Se ainda não estiver, execute `rclone\winfsp-2.0.23075.msi` e conclua a instalação. O WinFsp é pré-requisito obrigatório para o `rclone mount` criar uma unidade no Windows.
+3. Confirme que `rclone.exe` está na mesma pasta dos arquivos `.bat`.
+
+O projeto inclui o executável do rclone e o instalador WinFsp usado por esta versão. O arquivo `rclone.conf` local não é enviado ao Git; preserve-o em local seguro, pois ele contém os dados de acesso ao FTP.
+
+Se preferir obter versões mais recentes diretamente dos projetos oficiais, consulte [WinFsp](https://winfsp.dev/) e [rclone para Windows](https://rclone.org/downloads/).
+
+### Configurar o remoto
+
+Execute:
+
+```text
+rclone\01_Rclone config.bat
+```
+
+No assistente do rclone:
+
+1. escolha `n` para criar um remoto;
+2. use exatamente o nome `FTPLOCAL`;
+3. selecione o tipo `ftp`;
+4. informe o host `127.0.0.1` e a porta `2121`;
+5. informe o usuário e a senha FTP criados no Nebula;
+6. mantenha FTP simples, sem TLS, para a conexão estritamente local;
+7. salve e encerre o assistente.
+
+### Montar a unidade
+
+Com o Nebula em execução, abra normalmente, sem **Executar como administrador**:
+
+```text
+rclone\02_mount_FTPLOCAL.bat
+```
+
+O script procura `rclone.exe` e `rclone.conf` na própria pasta, monta `S:` com o nome `FTPLOCAL` e guarda cache e logs em `%LOCALAPPDATA%\NebulaLocal\rclone-cache`. Mantenha a janela aberta; pressione `Ctrl+C` para desmontar.
+
+Se a montagem informar que WinFsp ou FUSE não está disponível, encerre o script, execute `rclone\winfsp-2.0.23075.msi` e tente novamente depois de concluir a instalação.
+
+Se `S:` já estiver ocupada, edite a variável `MOUNT_DRIVE` no início de `02_mount_FTPLOCAL.bat` e escolha outra letra livre.
+
 ## 10. Firewall e rede local
 
 Para uso somente no mesmo computador, normalmente nenhuma regra adicional é necessária.

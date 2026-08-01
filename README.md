@@ -104,6 +104,17 @@ Senha: senha criada no gerenciador
 
 Para instruções de envio, download, encerramento e solução de problemas, consulte [docs/USAGE.md](docs/USAGE.md).
 
+## Unidade FTPLOCAL opcional
+
+No Windows, o FTP também pode ser apresentado como a unidade `S:` com o nome `FTPLOCAL`, permitindo usar o Explorador de Arquivos e outros programas locais. Essa opção usa os scripts da pasta `rclone` e não substitui o servidor Nebula, que deve permanecer em execução.
+
+1. Caso o WinFsp ainda não esteja instalado, execute `rclone\winfsp-2.0.23075.msi`. Ele é pré-requisito para o rclone montar uma unidade no Windows.
+2. Confirme que `rclone.exe` está dentro da pasta `rclone`.
+3. Execute `rclone\01_Rclone config.bat` e crie um remoto FTP chamado `FTPLOCAL`, apontando para `127.0.0.1:2121`.
+4. Inicie o Nebula e execute `rclone\02_mount_FTPLOCAL.bat` sem elevar como administrador.
+
+Consulte as instruções completas em [docs/INSTALLATION.md](docs/INSTALLATION.md#unidade-ftplocal-opcional) e [docs/USAGE.md](docs/USAGE.md#usar-como-unidade-do-windows-opcional).
+
 ## Configuração
 
 O arquivo `.env` é criado pelo assistente e não deve ser publicado. As principais opções são:

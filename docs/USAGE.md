@@ -32,6 +32,23 @@ Se usar o Gerenciador de Sites:
 
 O diretório inicial será `/<seu_login>`.
 
+## Usar como unidade do Windows (opcional)
+
+Depois de concluir a [configuração opcional do rclone](INSTALLATION.md#unidade-ftplocal-opcional), mantenha o Nebula aberto e execute:
+
+```text
+rclone\02_mount_FTPLOCAL.bat
+```
+
+O Explorador de Arquivos mostrará a unidade `S:` com o nome `FTPLOCAL`. Você poderá copiar, mover, renomear e excluir itens usando programas do próprio computador. As operações continuam passando pelo servidor FTP local e pelo fluxo normal de upload do Nebula.
+
+- Não feche a janela de montagem enquanto estiver usando a unidade.
+- Para desmontar com segurança, encerre transferências e pressione `Ctrl+C` nessa janela.
+- Execute o script como usuário normal. Uma unidade montada em uma janela elevada pode não aparecer no Explorador executado sem elevação.
+- O cache fica em `%LOCALAPPDATA%\NebulaLocal\rclone-cache` e pode chegar ao limite configurado de 100 GB.
+- Se o WinFsp ainda não estiver instalado, execute `rclone\winfsp-2.0.23075.msi`; sem esse pré-requisito, o rclone não consegue montar a unidade no Windows.
+- Se a unidade não aparecer, confirme também que `S:` está livre e que o remoto se chama exatamente `FTPLOCAL`.
+
 ## Enviar arquivos
 
 Arraste arquivos do painel local para o painel remoto do cliente FTP.
