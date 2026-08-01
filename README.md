@@ -151,12 +151,15 @@ Nunca publique `.env`, tokens, `API_HASH`, arquivos `.session`, `nebula.db` ou l
 
 Faça backup de `data/nebula.db` e preserve o canal do Telegram. Sem o banco, o Nebula perde a relação entre os nomes virtuais e os documentos armazenados.
 
+> **Atenção:** os metadados, contas, permissões e credenciais do Nebula são armazenados localmente. Se o computador for formatado ou o disco falhar sem backup, o conteúdo do canal pode continuar no Telegram, mas o Nebula pode perder a relação necessária para listar e baixar os arquivos. Antes de formatar, trocar de computador ou fazer manutenção, siga o procedimento de [backup e restauração](docs/USAGE.md#backup-e-restauração).
+
 ## Segurança e limitações
 
 - FTP simples não criptografa usuário, senha ou conteúdo em trânsito. Use-o apenas no computador local ou em uma rede confiável.
 - Para acesso pela internet, prefira VPN; não exponha diretamente a porta FTP.
 - O Telegram é um serviço externo sujeito a limites, disponibilidade e termos próprios.
 - Não trate esta solução como cópia única de arquivos importantes.
+- Mantenha uma cópia recente dos dados locais em outro disco, computador ou serviço de backup.
 - A senha FTP segue o comportamento do projeto original e é armazenada localmente. Proteja o arquivo SQLite e a conta do Windows.
 
 ## Desenvolvimento

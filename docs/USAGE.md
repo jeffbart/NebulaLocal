@@ -102,19 +102,47 @@ O gerenciador permite:
 
 Os dados ficam em `data\nebula.db`.
 
-## Backup
+## Backup e restauração
 
-Com o Nebula encerrado, copie:
+> **Risco de perda:** o canal do Telegram armazena as partes dos arquivos, mas o computador armazena o banco que relaciona nomes, pastas e partes. Uma formatação, falha de disco ou crash sem backup pode tornar os arquivos inacessíveis pelo Nebula mesmo que as mensagens ainda existam no canal.
+
+### O que guardar
+
+Encerre o Nebula com `Ctrl+C` e aguarde o desligamento antes de copiar o banco. Faça backup de:
 
 ```text
 data\nebula.db
 .env
 Nebula_MonoBot.session
+rclone\rclone.conf
 ```
 
-Armazene o backup de `.env` e `.session` em local protegido, pois são dados sensíveis.
+- `data\nebula.db` é o item principal: contém contas, permissões, diretórios virtuais e a relação entre os arquivos e as mensagens do Telegram.
+- `.env` contém a configuração e credenciais do Telegram.
+- `Nebula_MonoBot.session` preserva a sessão usada pelo Pyrogram.
+- `rclone\rclone.conf` é necessário somente para quem usa a unidade `FTPLOCAL`.
+- Se houver transferências pendentes, copie também `staging\`. Prefira concluir os uploads antes do backup ou da troca de computador.
 
-O backup do banco não substitui a preservação do canal: os documentos precisam continuar disponíveis no Telegram.
+Guarde o backup fora do computador do Nebula, por exemplo em um disco externo desconectado após a cópia, outro computador ou armazenamento confiável. `.env`, `.session` e `rclone.conf` possuem dados sensíveis; proteja o backup com criptografia e não o publique no GitHub.
+
+Faça backups periódicos e sempre antes de:
+
+- formatar ou trocar o computador;
+- substituir ou reparar o disco;
+- atualizar o sistema ou o projeto;
+- alterar em massa arquivos, usuários ou permissões.
+
+### Restaurar em outro computador
+
+1. Instale ou clone o Nebula Local no novo computador.
+2. Execute a instalação das dependências, mas não inicie o servidor ainda.
+3. Copie `nebula.db` para `data\nebula.db` e restaure `.env` e `Nebula_MonoBot.session` na raiz do projeto.
+4. Se usar a unidade local, restaure `rclone.conf` dentro da pasta `rclone` e instale o WinFsp.
+5. Restaure `staging\` somente se ela tiver sido incluída no backup.
+6. Confirme que o bot ainda participa do mesmo canal privado e execute `02_TESTAR_TELEGRAM.bat`.
+7. Inicie o Nebula e teste a listagem e o download de um arquivo antes de descartar o backup antigo.
+
+O backup local não substitui a preservação do canal: banco e mensagens do Telegram são partes complementares da recuperação.
 
 ## Logs
 

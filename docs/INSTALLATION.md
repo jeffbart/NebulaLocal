@@ -237,7 +237,10 @@ Antes de atualizar, encerre o Nebula com `Ctrl+C` e faça backup de:
 .env
 data\nebula.db
 Nebula_MonoBot.session
+rclone\rclone.conf
 ```
+
+Se existirem uploads pendentes, copie também `staging\`. Guarde esse backup fora do computador; uma cópia no mesmo disco não protege contra formatação ou falha física. Consulte o procedimento completo de [backup e restauração](USAGE.md#backup-e-restauração).
 
 Depois:
 
@@ -254,7 +257,7 @@ Execute novamente:
 
 ## Desinstalação
 
-Encerre o programa e remova a pasta do projeto. Antes disso, guarde `data\nebula.db` se quiser preservar metadados e contas.
+Encerre o programa e remova a pasta do projeto. Antes disso, faça o [backup completo](USAGE.md#backup-e-restauração). Apagar a pasta ou formatar o computador sem preservar o banco pode eliminar o acesso organizado aos arquivos mantidos no Telegram.
 
 Revogue o token pelo BotFather caso não pretenda mais usar o bot.
 
