@@ -77,9 +77,12 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 bot.captions,
                 [
-                    "Arquivo: arquivo.bin\nParte: 03 de 03",
-                    "Arquivo: arquivo.bin\nParte: 02 de 03",
-                    "Arquivo: arquivo.bin\nParte: 01 de 03",
+                    "Arquivo: arquivo.bin\nParte: 03 de 03\n"
+                    "Tamanho total: 10 B\nEnviado: 2 B de 10 B (20.0%)",
+                    "Arquivo: arquivo.bin\nParte: 02 de 03\n"
+                    "Tamanho total: 10 B\nEnviado: 6 B de 10 B (60.0%)",
+                    "Arquivo: arquivo.bin\nParte: 01 de 03\n"
+                    "Tamanho total: 10 B\nEnviado: 10 B de 10 B (100.0%)",
                 ],
             )
             self.assertFalse(os.path.exists(local_path))

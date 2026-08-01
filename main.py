@@ -67,6 +67,16 @@ class Metrics:
         mb = cls.bytes_uploaded / (1024*1024)
         logger.info(f"📊 Stats: ⬆️ {cls.uploads_total} uploads ({mb:.2f} MB) | ❌ {cls.uploads_failed} falhas")
 
+def format_file_size(size_bytes):
+    size = float(size_bytes)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size < 1024 or unit == "TB":
+            if unit == "B":
+                return f"{int(size)} {unit}"
+            formatted = f"{size:.2f}".rstrip("0").rstrip(".")
+            return f"{formatted} {unit}"
+        size /= 1024
+
 async def stats_reporter():
     while True: await asyncio.sleep(300); Metrics.report()
 
@@ -267,9 +277,18 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         part_number_width = max(2, len(str(total_parts)))
                         part_label = str(part_num + 1).zfill(part_number_width)
                         total_label = str(total_parts).zfill(part_number_width)
+                        confirmed_bytes = sum(
+                            int(part.get("file_size") or 0)
+                            for part in parts_by_id.values()
+                        )
+                        uploaded_bytes = min(total_size, confirmed_bytes + len(chunk_data))
+                        uploaded_percent = (uploaded_bytes / total_size * 100) if total_size else 100
                         telegram_caption = (
                             f"Arquivo: {filename}\n"
-                            f"Parte: {part_label} de {total_label}"
+                            f"Parte: {part_label} de {total_label}\n"
+                            f"Tamanho total: {format_file_size(total_size)}\n"
+                            f"Enviado: {format_file_size(uploaded_bytes)} de "
+                            f"{format_file_size(total_size)} ({uploaded_percent:.1f}%)"
                         )
                         sent_msg = None
 
