@@ -64,6 +64,10 @@ O fluxo é:
 
 O envio em ordem inversa não altera o arquivo baixado: os metadados preservam a ordem original das partes. Se o processo for interrompido depois de uma confirmação, o Nebula reutiliza o registro persistido e não depende dos bytes locais que já foram liberados.
 
+Ao reiniciar, o Nebula reconstrói automaticamente a fila em memória usando os registros `staging` e `uploading` do SQLite. Arquivos que já possuam partes confirmadas retomam do ponto persistido; registros cujo arquivo local não exista passam para `failed`.
+
+Todos os arquivos presentes na fila reconstruída ficam protegidos contra o coletor de temporários, mesmo que aguardem por mais tempo que `MAX_STAGING_AGE`.
+
 Cada documento publicado no canal recebe uma legenda com o nome original, a numeração, o tamanho total e o progresso acumulado do upload. Embora o envio físico ocorra do final para o início para liberar espaço progressivamente, a legenda segue a ordem das mensagens: a primeira parte enviada aparece como `Parte: 01`, e a contagem cresce até o total.
 
 Identificadores hexadecimais usados internamente na pasta `staging` são ocultados da legenda. Assim, um nome interno como `7e61363d2ef04b099d4d3034c3d50a4f_filme.mkv` aparece no canal apenas como `filme.mkv`.
@@ -71,10 +75,10 @@ Identificadores hexadecimais usados internamente na pasta `staging` são ocultad
 O formato da legenda é:
 
 ```text
-Arquivo: Godzilla vs. Mothra - 1992 - Tri Áudio - 1080p-RMZ.mkv
-Parte: 41 de 52
-Tamanho total: 3.21 GB
-Enviado: 725 MB de 3.21 GB (22.1%)
+Pasta: /Filmes/1960S/
+Arquivo: After.the.Fox.1966.1080p.AMZN.WEB-DL.DDP2.0.H.264-GPRS.mkv
+Parte: 102 de 117
+Enviado: 6.37 GB de 7.31 GB (87.2%)
 ```
 
 Não apague arquivos manualmente de `staging` enquanto o Nebula estiver processando.
@@ -91,7 +95,7 @@ MIN_FREE_DISK_GB=20
 
 ### Comandos do bot no Telegram
 
-- `/queue` — mostra quantos uploads estão em processamento, aguardando e com falha;
+- `/queue` — apaga a mensagem do comando e publica a fila organizada em itens enfileirados, em processamento, aguardando e com falha; itens em processamento incluem o volume já confirmado no Telegram e o tamanho total;
 - `/fetch` — envia a relação completa dos uploads com falha;
 - `/clearfailed` — exibe o aviso de limpeza, sem remover nada;
 - `/clearfailed confirmar` — remove os registros com falha e os respectivos arquivos temporários locais;

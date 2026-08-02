@@ -163,10 +163,10 @@ Uploads são divididos e enviados fisicamente do fim para o início, permitindo 
 Exemplo de legenda:
 
 ```text
-Arquivo: Godzilla vs. Mothra - 1992 - Tri Áudio - 1080p-RMZ.mkv
-Parte: 41 de 52
-Tamanho total: 3.21 GB
-Enviado: 725 MB de 3.21 GB (22.1%)
+Pasta: /Filmes/1960S/
+Arquivo: After.the.Fox.1966.1080p.AMZN.WEB-DL.DDP2.0.H.264-GPRS.mkv
+Parte: 102 de 117
+Enviado: 6.37 GB de 7.31 GB (87.2%)
 ```
 
 Nunca publique `.env`, tokens, `API_HASH`, arquivos `.session`, `nebula.db` ou logs. Esses itens já estão cobertos pelo `.gitignore`.
@@ -180,6 +180,7 @@ Nunca publique `.env`, tokens, `API_HASH`, arquivos `.session`, `nebula.db` ou l
 | `Nebula_MonoBot.session` | Sessão do Pyrogram |
 | `.env` | Credenciais e configurações |
 | `nebula.log` | Registro de execução |
+| `05_VERIFICAR_ACERVO.bat` | Gera a árvore do acervo SQLite em `logs/relatorio_acervo_AAAAMMDD_HHMMSS.txt` |
 
 Faça backup de `data/nebula.db` e preserve o canal do Telegram. Sem o banco, o Nebula perde a relação entre os nomes virtuais e os documentos armazenados.
 

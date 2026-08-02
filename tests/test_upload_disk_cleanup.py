@@ -50,12 +50,92 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
             "backup_2026_filme.mkv",
         )
 
+    def test_display_destination_hides_ftp_login_root(self):
+        self.assertEqual(main.display_destination("/jeffbart/Filmes/1960S"), "/Filmes/1960S/")
+        self.assertEqual(main.display_destination("/jeffbart"), "/")
+        self.assertEqual(main.display_destination("/"), "/")
+
     def test_folder_watcher_ignores_ftp_files_until_direct_queueing(self):
         internal = "1790e6bb482b4a528d09132100e5654c_filme.mp4"
         self.assertFalse(main.is_watcher_candidate(internal))
         self.assertFalse(main.is_watcher_candidate(internal + ".partial"))
         self.assertFalse(main.is_watcher_candidate(internal + ".ftpready"))
         self.assertTrue(main.is_watcher_candidate("arquivo_colocado_manualmente.mp4"))
+
+    def test_garbage_collector_protects_waiting_queue_paths(self):
+        queue = asyncio.Queue()
+        queue.put_nowait({"path": os.path.join("staging", "aguardando.mkv")})
+        protected = main.protected_upload_paths(queue)
+        expected = os.path.normcase(os.path.abspath(os.path.join("staging", "aguardando.mkv")))
+        self.assertIn(expected, protected)
+
+    def test_queue_report_uses_telegram_progress_layout(self):
+        report = main.format_queue_report(
+            [],
+            [{
+                "name": "0123456789abcdef0123456789abcdef_filme.mkv",
+                "size": 10 * 1024 ** 3,
+                "parts": [{"file_size": 4 * 1024 ** 3}],
+            }],
+            [],
+            [],
+        )
+        self.assertIn("📋 Fila do NebulaFTP", report)
+        self.assertIn("📤 Em processamento (1)", report)
+        self.assertIn("1. filme.mkv\n— 4 GB de 10 GB", report)
+        self.assertNotIn("Aguardando", report)
+        self.assertNotIn("Com falha", report)
+
+    def test_queue_report_lists_every_nonempty_state(self):
+        document = {"name": "arquivo.mkv", "size": 1024, "parts": []}
+        report = main.format_queue_report(
+            [document], [document], [document], [document]
+        )
+        self.assertIn("📥 Na fila (1)", report)
+        self.assertIn("📤 Em processamento (1)", report)
+        self.assertIn("⏳ Aguardando (1)", report)
+        self.assertIn("❌ Com falha (1)", report)
+
+    async def test_restores_pending_uploads_after_restart(self):
+        class Cursor:
+            def __init__(self, documents):
+                self.documents = iter(documents)
+            def __aiter__(self):
+                return self
+            async def __anext__(self):
+                try:
+                    return next(self.documents)
+                except StopIteration:
+                    raise StopAsyncIteration
+
+        class Files:
+            def __init__(self, documents):
+                self.documents = documents
+                self.updates = []
+            def find(self, query):
+                statuses = query["status"]["$in"]
+                return Cursor([d for d in self.documents if d["status"] in statuses])
+            async def update_one(self, query, update):
+                self.updates.append((query, update))
+
+        with tempfile.TemporaryDirectory() as directory:
+            existing = os.path.join(directory, "arquivo.mkv")
+            with open(existing, "wb") as stream:
+                stream.write(b"conteudo")
+            documents = [
+                {"_id": 1, "name": "arquivo.mkv", "parent": "/user", "size": 8, "status": "staging", "local_path": existing},
+                {"_id": 2, "name": "ausente.mkv", "parent": "/user", "size": 10, "status": "uploading", "local_path": os.path.join(directory, "ausente.mkv")},
+            ]
+            files = Files(documents)
+            queue = asyncio.Queue()
+
+            restored, missing = await main.restore_pending_uploads(
+                SimpleNamespace(files=files), queue
+            )
+
+            self.assertEqual((restored, missing), (1, 1))
+            self.assertEqual((await queue.get())["filename"], "arquivo.mkv")
+            self.assertEqual(files.updates[0][1]["$set"]["status"], "failed")
 
     async def test_reclaims_each_confirmed_part_and_keeps_metadata_ordered(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -95,12 +175,12 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 bot.captions,
                 [
-                    "Arquivo: arquivo.bin\nParte: 01 de 03\n"
-                    "Tamanho total: 10 B\nEnviado: 2 B de 10 B (20.0%)",
-                    "Arquivo: arquivo.bin\nParte: 02 de 03\n"
-                    "Tamanho total: 10 B\nEnviado: 6 B de 10 B (60.0%)",
-                    "Arquivo: arquivo.bin\nParte: 03 de 03\n"
-                    "Tamanho total: 10 B\nEnviado: 10 B de 10 B (100.0%)",
+                    "Pasta: /\nArquivo: arquivo.bin\nParte: 01 de 03\n"
+                    "Enviado: 2 B de 10 B (20.0%)",
+                    "Pasta: /\nArquivo: arquivo.bin\nParte: 02 de 03\n"
+                    "Enviado: 6 B de 10 B (60.0%)",
+                    "Pasta: /\nArquivo: arquivo.bin\nParte: 03 de 03\n"
+                    "Enviado: 10 B de 10 B (100.0%)",
                 ],
             )
             self.assertFalse(os.path.exists(local_path))

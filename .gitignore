@@ -9,6 +9,8 @@ staging/
 *.db-shm
 *.db-wal
 *.log
+logs/*.txt
+relatorio_acervo.txt
 rclone/rclone.conf
 rclone/README.html
 rclone/README.txt

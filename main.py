@@ -50,6 +50,13 @@ if pp_str and "-" in pp_str:
 # O Garbage Collector NÃO pode tocar nestes arquivos.
 ACTIVE_UPLOADS = set()
 
+def protected_upload_paths(queue=UPLOAD_QUEUE):
+    paths = set(ACTIVE_UPLOADS)
+    paths.update(
+        task.get("path") for task in list(queue._queue) if task.get("path")
+    )
+    return {os.path.normcase(os.path.abspath(path)) for path in paths}
+
 # --- LOGGING ---
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 log_handler = RotatingFileHandler('nebula.log', maxBytes=5*1024*1024, backupCount=2)
@@ -87,6 +94,14 @@ def display_filename(filename):
     """Remove apenas o prefixo hexadecimal interno criado no staging."""
     return re.sub(r"^[0-9a-fA-F]{32}_", "", filename, count=1)
 
+def display_destination(parent):
+    """Convert an internal /login/path into the path shown by the FTP client."""
+    parts = [part for part in str(parent).replace("\\", "/").split("/") if part]
+    visible_parts = parts[1:] if parts else []
+    if not visible_parts:
+        return "/"
+    return "/" + "/".join(visible_parts) + "/"
+
 def is_watcher_candidate(filename):
     """Return False for files managed internally by an FTP transfer."""
     if filename.endswith((".partial", ".ftpready")):
@@ -123,21 +138,110 @@ async def _documents_by_status(mongo, statuses):
         documents.append(document)
     return documents
 
+async def restore_pending_uploads(mongo, queue=UPLOAD_QUEUE):
+    """Rebuild the in-memory queue from durable SQLite records after restart."""
+    pending = await _documents_by_status(mongo, ("staging", "uploading"))
+    queued_keys = {
+        (task.get("parent"), task.get("filename"))
+        for task in list(queue._queue)
+    }
+    restored = 0
+    missing = 0
+
+    for document in pending:
+        key = (document.get("parent"), document.get("name"))
+        if key in queued_keys:
+            continue
+
+        local_path = document.get("local_path")
+        if not local_path or not os.path.isfile(local_path):
+            missing += 1
+            await mongo.files.update_one(
+                {"_id": document["_id"]},
+                {"$set": {"status": "failed"}},
+            )
+            continue
+
+        if local_path.endswith((".partial", ".ftpready")):
+            continue
+
+        await queue.put({
+            "path": local_path,
+            "filename": document["name"],
+            "parent": document["parent"],
+            "size": int(document.get("size") or os.path.getsize(local_path)),
+        })
+        queued_keys.add(key)
+        restored += 1
+
+    logger.info(
+        "Fila restaurada do SQLite: %d upload(s); %d arquivo(s) ausente(s).",
+        restored,
+        missing,
+    )
+    return restored, missing
+
 def _upload_line(document):
     name = display_filename(document.get("name", "arquivo sem nome"))
     return f"- {name} ({format_file_size(document.get('size') or 0)})"
 
+def format_queue_report(queued, processing, waiting, failed):
+    lines = ["📋 Fila do NebulaFTP"]
+
+    def add_section(icon, title, documents, show_progress=False):
+        if not documents:
+            return
+        lines.extend(("", f"{icon} {title} ({len(documents)})"))
+        for index, document in enumerate(documents, 1):
+            name = display_filename(document.get("name", "arquivo sem nome"))
+            total_size = int(document.get("size") or 0)
+            lines.append(f"{index}. {name}")
+            if show_progress:
+                uploaded_size = min(
+                    total_size,
+                    sum(int(part.get("file_size") or 0) for part in document.get("parts") or []),
+                )
+                lines.append(
+                    f"— {format_file_size(uploaded_size)} de {format_file_size(total_size)}"
+                )
+            else:
+                lines.append(f"— {format_file_size(total_size)}")
+
+    add_section("📥", "Na fila", queued)
+    add_section("📤", "Em processamento", processing, show_progress=True)
+    add_section("⏳", "Aguardando", waiting)
+    add_section("❌", "Com falha", failed)
+    if not (queued or processing or waiting or failed):
+        lines.extend(("", "— Nenhum upload na fila"))
+    return "\n".join(lines)
+
 async def register_bot_commands(bot, mongo):
     async def queue_command(_, message):
+        try:
+            await message.delete()
+        except Exception as exc:
+            logger.debug("Nao foi possivel apagar o comando /queue: %s", exc)
+
         processing = await _documents_by_status(mongo, ("uploading",))
-        waiting = await _documents_by_status(mongo, ("staging",))
+        staging = await _documents_by_status(mongo, ("staging",))
         failed = await _documents_by_status(mongo, ("failed",))
-        await message.reply_text(
-            "Fila de uploads\n"
-            f"Em processamento: {len(processing)}\n"
-            f"Aguardando: {len(waiting)}\n"
-            f"Com falha: {len(failed)}"
-        )
+
+        queued_keys = {
+            (task.get("parent"), task.get("filename"))
+            for task in list(UPLOAD_QUEUE._queue)
+        }
+        queued = [
+            document for document in staging
+            if (document.get("parent"), document.get("name")) in queued_keys
+        ]
+        waiting = [
+            document for document in staging
+            if (document.get("parent"), document.get("name")) not in queued_keys
+        ]
+
+        report = format_queue_report(queued, processing, waiting, failed)
+        for start in range(0, len(report), 4000):
+            await message.reply_text(report[start:start + 4000])
 
     async def fetch_command(_, message):
         failed = await _documents_by_status(mongo, ("failed",))
@@ -222,6 +326,7 @@ async def garbage_collector():
     while True:
         try:
             now = time.time()
+            protected_paths = protected_upload_paths()
             if os.path.exists(staging_dir):
                 for root, dirs, files in os.walk(staging_dir):
                     for f in files:
@@ -230,7 +335,7 @@ async def garbage_collector():
 
                         # --- PROTEÇÃO CRÍTICA ---
                         # Se o arquivo estiver sendo enviado, PULA.
-                        if fp in ACTIVE_UPLOADS:
+                        if os.path.normcase(os.path.abspath(fp)) in protected_paths:
                             continue
                         # ------------------------
 
@@ -419,10 +524,11 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         uploaded_bytes = min(total_size, confirmed_bytes + len(chunk_data))
                         uploaded_percent = (uploaded_bytes / total_size * 100) if total_size else 100
                         visible_filename = display_filename(filename)
+                        visible_destination = display_destination(parent)
                         telegram_caption = (
+                            f"Pasta: {visible_destination}\n"
                             f"Arquivo: {visible_filename}\n"
                             f"Parte: {part_label} de {total_label}\n"
-                            f"Tamanho total: {format_file_size(total_size)}\n"
                             f"Enviado: {format_file_size(uploaded_bytes)} de "
                             f"{format_file_size(total_size)} ({uploaded_percent:.1f}%)"
                         )
@@ -554,6 +660,7 @@ async def main():
     server = Server(MongoDBUserManager(mongo), MongoDBPathIO)
     enable_utf8_ftp_commands(server)
     await register_bot_commands(bot, mongo)
+    await restore_pending_uploads(mongo)
 
     asyncio.create_task(garbage_collector())
     asyncio.create_task(stats_reporter())
