@@ -28,6 +28,8 @@ class FakeBot:
         self.local_path = local_path
         self.sizes_at_send = []
         self.captions = []
+        self.edited_captions = []
+        self.messages = []
 
     async def send_document(self, **kwargs):
         self.sizes_at_send.append(os.path.getsize(self.local_path))
@@ -37,6 +39,12 @@ class FakeBot:
             id=part_id,
             document=SimpleNamespace(file_id=f"telegram-{part_id}"),
         )
+
+    async def edit_message_caption(self, **kwargs):
+        self.edited_captions.append(kwargs)
+
+    async def send_message(self, **kwargs):
+        self.messages.append(kwargs)
 
 
 class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
@@ -175,14 +183,23 @@ class UploadDiskCleanupTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 bot.captions,
                 [
-                    "Pasta: /\nArquivo: arquivo.bin\nParte: 01 de 03\n"
+                    "Worker: W1\nPasta: /\nArquivo: arquivo.bin\nParte: 01 de 03\n"
                     "Enviado: 2 B de 10 B (20.0%)",
-                    "Pasta: /\nArquivo: arquivo.bin\nParte: 02 de 03\n"
+                    "Worker: W1\nPasta: /\nArquivo: arquivo.bin\nParte: 02 de 03\n"
                     "Enviado: 6 B de 10 B (60.0%)",
-                    "Pasta: /\nArquivo: arquivo.bin\nParte: 03 de 03\n"
+                    "Worker: W1\nPasta: /\nArquivo: arquivo.bin\nParte: 03 de 03\n"
                     "Enviado: 10 B de 10 B (100.0%)",
                 ],
             )
+            self.assertEqual(len(bot.edited_captions), 1)
+            completed = bot.edited_captions[0]
+            self.assertEqual(completed["message_id"], 3)
+            self.assertIn("✅\nUPLOAD CONCLUÍDO", completed["caption"])
+            self.assertIn("Hora de início:", completed["caption"])
+            self.assertIn("Hora de término:", completed["caption"])
+            self.assertIn("Duração:", completed["caption"])
+            self.assertEqual(bot.messages[0]["text"], "✅")
+            self.assertEqual(bot.messages[0]["reply_to_message_id"], 3)
             self.assertFalse(os.path.exists(local_path))
             self.assertEqual(document["status"], "completed")
             self.assertEqual(document["size"], 10)

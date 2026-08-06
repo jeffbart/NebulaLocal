@@ -184,6 +184,7 @@ class SQLiteFilesCollection:
             "local_path",
             "upload_id",
             "uploaded_at",
+            "upload_started_at",
             "obfuscated_id",
         )
         aliases = {"uploadId": "upload_id"}

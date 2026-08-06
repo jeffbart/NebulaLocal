@@ -112,6 +112,18 @@ Senha: senha criada no gerenciador
 
 Para instruções de envio, download, encerramento e solução de problemas, consulte [docs/USAGE.md](docs/USAGE.md).
 
+## Acesso remoto com Tailscale
+
+Para acessar o FTP fora da rede local, use o Tailscale diretamente entre o computador do Nebula e o dispositivo cliente. Não encaminhe a porta 2121 no roteador e não publique o FTP com Tailscale Funnel.
+
+1. [Instale o Tailscale no Windows](https://tailscale.com/docs/install/windows) do Nebula e entre em sua tailnet.
+2. Instale o Tailscale no computador remoto e use a mesma tailnet autorizada.
+3. Mantenha `HOST=0.0.0.0` e `PORT=2121` no `.env`.
+4. Descubra o endereço do servidor com `tailscale ip -4` ou use seu nome [MagicDNS](https://tailscale.com/docs/features/magicdns).
+5. No WinSCP ou FileZilla remoto, informe esse IP/nome, porta `2121`, FTP simples e modo passivo.
+
+O túnel do Tailscale protege o tráfego entre os dispositivos, mas o login e a senha do próprio FTP continuam obrigatórios. Consulte a [configuração detalhada](docs/INSTALLATION.md#acesso-remoto-com-tailscale) e o [guia de uso remoto](docs/USAGE.md#acessar-remotamente-com-tailscale).
+
 ## Unidade FTPLOCAL opcional
 
 No Windows, o FTP também pode ser apresentado como a unidade `S:` com o nome `FTPLOCAL`, permitindo usar o Explorador de Arquivos e outros programas locais. Essa opção usa os scripts da pasta `rclone` e não substitui o servidor Nebula, que deve permanecer em execução.
@@ -163,11 +175,14 @@ Uploads são divididos e enviados fisicamente do fim para o início, permitindo 
 Exemplo de legenda:
 
 ```text
+Worker: W2
 Pasta: /Filmes/1960S/
 Arquivo: After.the.Fox.1966.1080p.AMZN.WEB-DL.DDP2.0.H.264-GPRS.mkv
 Parte: 102 de 117
 Enviado: 6.37 GB de 7.31 GB (87.2%)
 ```
+
+Quando o arquivo é concluído, a legenda da última parte recebe `✅ UPLOAD CONCLUÍDO`, os horários de início e término e a duração total em minutos. O bot também responde à última parte com uma mensagem contendo somente `✅`, exibida pelo Telegram no estilo de emoji grande.
 
 Nunca publique `.env`, tokens, `API_HASH`, arquivos `.session`, `nebula.db` ou logs. Esses itens já estão cobertos pelo `.gitignore`.
 

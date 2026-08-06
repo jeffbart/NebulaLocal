@@ -139,7 +139,7 @@ Execute:
 O resultado esperado é semelhante a:
 
 ```text
-SQLite pronto: ...\data\nebula.db (schema v1)
+SQLite pronto: ...\data\nebula.db (schema v2)
 ```
 
 O comando é idempotente: pode ser executado novamente quando houver atualizações de schema.
@@ -190,6 +190,62 @@ Modo: Passivo
 ```
 
 Use o login e a senha criados no gerenciador.
+
+## Acesso remoto com Tailscale
+
+O Tailscale cria uma rede privada entre dispositivos autorizados, mesmo quando eles estão atrás de roteadores ou mudam de rede. Cada equipamento recebe um IP Tailscale estável e um nome MagicDNS. O Nebula continua fornecendo o serviço FTP; o Tailscale fornece somente a conectividade privada entre as máquinas. Consulte os guias oficiais de [instalação no Windows](https://tailscale.com/docs/install/windows), [conexão entre dispositivos](https://tailscale.com/docs/how-to/connect-to-devices) e [MagicDNS](https://tailscale.com/docs/features/magicdns).
+
+### No computador que executa o Nebula
+
+1. Instale o Tailscale e faça login.
+2. Confirme que o computador aparece como conectado na página **Machines** da administração da tailnet.
+3. Mantenha estas opções no `.env`:
+
+   ```dotenv
+   HOST=0.0.0.0
+   PORT=2121
+   ```
+
+4. Inicie o Nebula normalmente.
+5. Abra o PowerShell e descubra o IPv4 do Tailscale:
+
+   ```powershell
+   tailscale ip -4
+   ```
+
+6. Se o Firewall do Windows solicitar autorização, permita o Python/Nebula para a interface usada pelo Tailscale. Não crie encaminhamento de porta no roteador.
+
+### No computador remoto
+
+1. Instale o Tailscale e entre na mesma tailnet, ou use uma conta/dispositivo explicitamente autorizado.
+2. Confirme a conectividade com o IP ou nome MagicDNS do servidor:
+
+   ```powershell
+   tailscale ping NOME-DO-SERVIDOR
+   Test-NetConnection NOME-DO-SERVIDOR -Port 2121
+   ```
+
+3. Configure o WinSCP ou FileZilla:
+
+   ```text
+   Host: NOME-DO-SERVIDOR ou 100.x.y.z
+   Porta: 2121
+   Protocolo: FTP
+   Criptografia: FTP simples
+   Modo: Passivo
+   Usuário: conta criada no Nebula
+   Senha: senha criada no Nebula
+   ```
+
+O MagicDNS permite usar o nome da máquina em vez do IP Tailscale. Se não resolver, use temporariamente o endereço `100.x.y.z` mostrado por `tailscale ip -4` e revise o DNS da tailnet.
+
+### Controle de acesso
+
+Na política padrão, dispositivos próprios da mesma tailnet normalmente conseguem se comunicar. Para uma tailnet compartilhada, configure acesso mínimo na página **Access controls**. A documentação atual recomenda [Grants](https://tailscale.com/docs/features/access-control/grants).
+
+FTP passivo usa a conexão de controle na porta 2121 e conexões TCP adicionais para os dados. Se a tailnet possuir regras restritivas, elas precisam permitir essas conexões entre o cliente autorizado e o computador do Nebula. Limite a origem a usuários/dispositivos confiáveis e o destino somente ao servidor; evite uma permissão global para toda a tailnet.
+
+Não use **Tailscale Funnel**, pois ele tornaria o serviço acessível publicamente. Também não é necessário configurar Tailscale Serve: para FTP passivo, conecte o cliente diretamente ao IP Tailscale ou nome MagicDNS do computador.
 
 ## Unidade FTPLOCAL opcional
 
@@ -249,7 +305,7 @@ Para outro equipamento da rede:
 4. mantenha a rede marcada como privada;
 5. libere também o intervalo passivo configurado, se necessário.
 
-Não encaminhe essas portas no roteador para a internet. Use uma VPN se precisar de acesso remoto.
+Não encaminhe essas portas no roteador para a internet. Para acesso remoto, siga a seção [Acesso remoto com Tailscale](#acesso-remoto-com-tailscale).
 
 ## Atualização
 

@@ -32,6 +32,35 @@ Se usar o Gerenciador de Sites:
 
 O diretório inicial será `/<seu_login>`.
 
+## Acessar remotamente com Tailscale
+
+Com o Tailscale instalado e conectado nos dois computadores, substitua `127.0.0.1` pelo IP Tailscale ou nome MagicDNS do computador que executa o Nebula:
+
+```text
+Host: nebulalocal ou 100.x.y.z
+Porta: 2121
+Protocolo: FTP
+Criptografia: FTP simples
+Modo: Passivo
+```
+
+Antes de abrir o cliente FTP, valide no computador remoto:
+
+```powershell
+tailscale ping nebulalocal
+Test-NetConnection nebulalocal -Port 2121
+```
+
+Se o ping Tailscale funcionar, mas a porta 2121 falhar:
+
+- confirme que o Nebula está em execução e usa `HOST=0.0.0.0`;
+- confira o Firewall do Windows no servidor;
+- revise as [regras de acesso da tailnet](https://tailscale.com/docs/features/access-control);
+- lembre que o modo passivo também abre conexões TCP de dados além da porta de controle;
+- tente o IP `100.x.y.z` se o nome MagicDNS não resolver.
+
+O Tailscale deve ser usado como rede privada direta. Não exponha a porta no roteador e não use Funnel para publicar o FTP na internet. As contas e permissões do Nebula continuam valendo normalmente.
+
 ## Usar como unidade do Windows (opcional)
 
 Depois de concluir a [configuração opcional do rclone](INSTALLATION.md#unidade-ftplocal-opcional), mantenha o Nebula aberto e execute:
@@ -75,11 +104,14 @@ Identificadores hexadecimais usados internamente na pasta `staging` são ocultad
 O formato da legenda é:
 
 ```text
+Worker: W2
 Pasta: /Filmes/1960S/
 Arquivo: After.the.Fox.1966.1080p.AMZN.WEB-DL.DDP2.0.H.264-GPRS.mkv
 Parte: 102 de 117
 Enviado: 6.37 GB de 7.31 GB (87.2%)
 ```
+
+Todas as partes identificam o worker responsável (`W1` a `W4`). Após o commit final no SQLite, a legenda da última parte é atualizada com um tique verde, os horários de início e término e a duração total do upload em minutos.
 
 Não apague arquivos manualmente de `staging` enquanto o Nebula estiver processando.
 

@@ -14,7 +14,7 @@ from typing import Iterator
 
 
 DEFAULT_DATABASE_PATH = Path("data") / "nebula.db"
-LATEST_SCHEMA_VERSION = 1
+LATEST_SCHEMA_VERSION = 2
 
 MIGRATIONS = {
     1: """
@@ -83,6 +83,9 @@ MIGRATIONS = {
         CREATE INDEX IF NOT EXISTS idx_nodes_status
             ON nodes(status) WHERE status IS NOT NULL;
         CREATE INDEX IF NOT EXISTS idx_file_parts_node ON file_parts(node_id, part_id);
+    """,
+    2: """
+        ALTER TABLE nodes ADD COLUMN upload_started_at INTEGER;
     """,
 }
 

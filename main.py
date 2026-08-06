@@ -9,6 +9,7 @@ import signal
 import math
 import re
 import shutil
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from os import environ
 from os.path import exists
@@ -469,10 +470,17 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
             parts_metadata = list(file_doc.get("parts") or [])
             parts_by_id = {part["part_id"]: part for part in parts_metadata}
             upload_failed = False
+            upload_started_at = int(file_doc.get("upload_started_at") or time.time())
+            completion_message_id = None
+            completion_caption = None
 
             await mongo.files.update_one(
                 {"_id": file_doc["_id"]},
-                {"$set": {"status": "uploading", "local_path": local_path}},
+                {"$set": {
+                    "status": "uploading",
+                    "local_path": local_path,
+                    "upload_started_at": upload_started_at,
+                }},
             )
 
             try:
@@ -526,6 +534,7 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         visible_filename = display_filename(filename)
                         visible_destination = display_destination(parent)
                         telegram_caption = (
+                            f"Worker: W{worker_id}\n"
                             f"Pasta: {visible_destination}\n"
                             f"Arquivo: {visible_filename}\n"
                             f"Parte: {part_label} de {total_label}\n"
@@ -577,6 +586,8 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         # A última parte permanece até o commit final dos
                         # metadados; logo depois o arquivo inteiro é removido.
                         if chunk_start == 0:
+                            completion_message_id = sent_msg.id
+                            completion_caption = telegram_caption
                             del chunk_data
                             mem_file.close()
                             break
@@ -600,10 +611,63 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                 )
 
             if not upload_failed:
+                if completion_message_id is None and 0 in parts_by_id:
+                    completion_message_id = parts_by_id[0].get("tg_message")
+                    width = max(2, len(str(total_parts)))
+                    total_label = str(total_parts).zfill(width)
+                    completion_caption = (
+                        f"Worker: W{worker_id}\n"
+                        f"Pasta: {display_destination(parent)}\n"
+                        f"Arquivo: {display_filename(filename)}\n"
+                        f"Parte: {total_label} de {total_label}\n"
+                        f"Enviado: {format_file_size(total_size)} de "
+                        f"{format_file_size(total_size)} (100.0%)"
+                    )
+
+                upload_finished_at = int(time.time())
                 await mongo.files.update_one(
                     {"_id": file_doc["_id"]},
-                    {"$set": {"size": total_size, "uploaded_at": int(time.time()), "parts": parts_metadata, "obfuscated_id": file_uuid, "status": "completed"}, "$unset": {"uploadId": 1, "local_path": 1}}
+                    {"$set": {"size": total_size, "uploaded_at": upload_finished_at, "parts": parts_metadata, "obfuscated_id": file_uuid, "status": "completed"}, "$unset": {"uploadId": 1, "local_path": 1, "upload_started_at": 1}}
                 )
+                if completion_message_id and completion_caption:
+                    duration_minutes = max(
+                        0.0,
+                        (upload_finished_at - upload_started_at) / 60,
+                    )
+                    completed_caption = (
+                        f"{completion_caption}\n\n"
+                        "✅\n"
+                        "UPLOAD CONCLUÍDO\n"
+                        f"Hora de início: {datetime.fromtimestamp(upload_started_at):%d/%m/%Y %H:%M:%S}\n"
+                        f"Hora de término: {datetime.fromtimestamp(upload_finished_at):%d/%m/%Y %H:%M:%S}\n"
+                        f"Duração: {duration_minutes:.1f} minutos"
+                    )
+                    try:
+                        await bot.edit_message_caption(
+                            chat_id=target_chat_id,
+                            message_id=completion_message_id,
+                            caption=completed_caption,
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "⚠️ [W%s] Não foi possível confirmar a conclusão na legenda: %s",
+                            worker_id,
+                            exc,
+                        )
+                    try:
+                        # Telegram renders an emoji-only message in the large
+                        # style, providing a clear visual completion marker.
+                        await bot.send_message(
+                            chat_id=target_chat_id,
+                            text="✅",
+                            reply_to_message_id=completion_message_id,
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            "⚠️ [W%s] Não foi possível enviar o tique de conclusão: %s",
+                            worker_id,
+                            exc,
+                        )
                 logger.info(f"✅ [W{worker_id}] Concluído: {filename}")
                 Metrics.log_success(total_size)
                 # Agora sim o GC ou nós mesmos podemos remover
