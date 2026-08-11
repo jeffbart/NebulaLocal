@@ -27,7 +27,7 @@ if not exist "%RCLONE_CONFIG%" (
     exit /b 1
 )
 
-"%RCLONE_EXE%" listremotes --config "%RCLONE_CONFIG%" | findstr /b /x /c:"FTPLOCAL:" >nul
+findstr /l /i /x /c:"[FTPLOCAL]" "%RCLONE_CONFIG%" >nul
 if errorlevel 1 (
     echo ERRO: o remoto FTPLOCAL nao existe em rclone.conf.
     echo Execute 01_Rclone config.bat e crie um remoto chamado FTPLOCAL.
