@@ -12,7 +12,14 @@ echo ============================================================
 echo.
 pause
 
-python configurar_telegram.py --discover-chat
+if not exist "python\python.exe" (
+    echo ERRO: python\python.exe nao encontrado.
+    echo A pasta "python" faz parte do repositorio e nao deve ser apagada.
+    pause
+    exit /b 1
+)
+
+"python\python.exe" configurar_telegram.py --discover-chat
 if errorlevel 1 (
     echo.
     echo O canal ainda nao foi encontrado. Confira as instrucoes acima.

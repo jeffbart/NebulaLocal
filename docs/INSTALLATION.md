@@ -6,18 +6,11 @@ Este guia prepara o Nebula Local no Windows usando SQLite. MongoDB não é neces
 
 Instale:
 
-- [Python 3.10 ou superior](https://www.python.org/downloads/).
 - [Git para Windows](https://git-scm.com/download/win), caso use `git clone`.
 - Um cliente FTP, como [FileZilla Client](https://filezilla-project.org/) ou [WinSCP](https://winscp.net/).
 - Telegram instalado em um telefone ou computador.
 
-Durante a instalação do Python, marque **Add Python to PATH**.
-
-Para conferir:
-
-```powershell
-python --version
-```
+Não é necessário instalar Python. O projeto já inclui, na pasta `python/`, um runtime Python 3.11 portátil e isolado de qualquer instalação do sistema — os scripts `.bat` usam sempre esse runtime.
 
 ## 2. Baixar o projeto
 
@@ -54,13 +47,9 @@ Dê dois cliques em:
 00_INSTALAR_DEPENDENCIAS.bat
 ```
 
-Esse script:
+Esse script confirma o Python portátil incluído (`python\python.exe`) e instala as bibliotecas de `requirements.txt` dentro dele — nenhuma instalação de Python no sistema é necessária, e nenhum Python do sistema é alterado.
 
-1. verifica o Python;
-2. cria o ambiente isolado `.venv`;
-3. instala as bibliotecas de `requirements.txt`.
-
-Se o Windows apresentar um problema local de certificado, o instalador tenta novamente usando somente os hosts oficiais do PyPI.
+Como as dependências já vêm pré-instaladas no repositório, esse passo normalmente é instantâneo e funciona mesmo sem internet. Se o `requirements.txt` for atualizado (por exemplo após um `git pull`) e for preciso baixar algo novo, e o Windows apresentar um problema local de certificado, o instalador tenta novamente usando somente os hosts oficiais do PyPI.
 
 ## 4. Preparar o Telegram
 

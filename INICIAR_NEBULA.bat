@@ -12,21 +12,21 @@ if not exist ".env" (
     exit /b 1
 )
 
-if not exist ".venv\Scripts\python.exe" (
-    echo ERRO: dependencias ainda nao foram instaladas.
-    echo Execute primeiro 00_INSTALAR_DEPENDENCIAS.bat.
+if not exist "python\python.exe" (
+    echo ERRO: python\python.exe nao encontrado.
+    echo A pasta "python" faz parte do repositorio e nao deve ser apagada.
     pause
     exit /b 1
 )
 
-".venv\Scripts\python.exe" setup_database.py
+"python\python.exe" setup_database.py
 if errorlevel 1 goto :erro
 
 echo.
 echo Iniciando Nebula Local em ftp://127.0.0.1:2121
 echo Pressione Ctrl+C para encerrar.
 echo.
-".venv\Scripts\python.exe" run_nebula.py
+"python\python.exe" run_nebula.py
 if errorlevel 1 goto :erro
 exit /b 0
 

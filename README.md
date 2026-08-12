@@ -6,7 +6,7 @@
 
 Servidor FTP local com armazenamento de arquivos em um canal privado do Telegram e metadados em SQLite.
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python 3.11 incluído](https://img.shields.io/badge/Python-3.11%20incluído-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Windows-suportado-0078D4?logo=windows)](#instalação-no-windows)
@@ -31,6 +31,7 @@ Esta edição é uma adaptação do [NebulaFTP original](https://github.com/samu
 - Persistência de cada parte confirmada e retomada segura após interrupção.
 - Scripts `.bat` para instalação, configuração e inicialização no Windows.
 - Docker disponível para ambientes Linux com rede do host.
+- Python 3.11 portátil incluído no repositório (pasta `python/`): nada para instalar, nem conflito com outra versão de Python já presente na máquina.
 
 ## Arquitetura
 
@@ -53,8 +54,8 @@ Nebula Local ─────► staging/
 
 ## Requisitos
 
-- Windows 10 ou 11.
-- Python 3.10 ou superior disponível no `PATH`.
+- Windows 10 ou 11 (64 bits).
+- Não é necessário instalar Python: o projeto inclui seu próprio runtime Python 3.11 portátil na pasta `python/`, isolado de qualquer Python já instalado no sistema.
 - Conta do Telegram.
 - `API_ID` e `API_HASH` obtidos em [my.telegram.org](https://my.telegram.org).
 - Bot criado no [@BotFather](https://t.me/BotFather).
@@ -215,13 +216,13 @@ Faça backup de `data/nebula.db` e preserve o canal do Telegram. Sem o banco, o 
 Execute a suíte de testes:
 
 ```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\python\python.exe -m unittest discover -s tests -v
 ```
 
 O schema é criado e atualizado por:
 
 ```powershell
-.\.venv\Scripts\python.exe setup_database.py
+.\python\python.exe setup_database.py
 ```
 
 ## Contribuições

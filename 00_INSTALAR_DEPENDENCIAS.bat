@@ -3,33 +3,24 @@ setlocal
 cd /d "%~dp0"
 title Nebula Local - Instalar dependencias
 
-where python >nul 2>&1
-if errorlevel 1 (
-    echo ERRO: Python nao foi encontrado no PATH.
-    echo Instale o Python 3.10 e marque "Add Python to PATH".
+if not exist "python\python.exe" (
+    echo ERRO: python\python.exe nao encontrado.
+    echo A pasta "python" faz parte do repositorio e nao deve ser apagada.
     pause
     exit /b 1
 )
 
-if not exist ".venv\Scripts\python.exe" (
-    echo Criando ambiente virtual...
-    python -m venv .venv
-    if errorlevel 1 goto :erro
-)
-
-echo Instalando dependencias...
-".venv\Scripts\python.exe" -m pip install --upgrade pip
-if errorlevel 1 goto :erro
-".venv\Scripts\python.exe" -m pip install -r requirements.txt
+echo Verificando dependencias no Python portatil incluido no projeto...
+"python\python.exe" -m pip install -r requirements.txt
 if errorlevel 1 (
     echo.
     echo A instalacao normal falhou; tentando novamente pelos hosts oficiais do PyPI...
-    ".venv\Scripts\python.exe" -m pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+    "python\python.exe" -m pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
     if errorlevel 1 goto :erro
 )
 
 echo.
-echo Dependencias instaladas com sucesso.
+echo Dependencias prontas. O projeto ja inclui um Python 3.11 proprio; nao e necessario instalar Python no sistema.
 pause
 exit /b 0
 

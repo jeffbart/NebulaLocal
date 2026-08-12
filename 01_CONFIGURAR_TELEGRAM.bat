@@ -3,15 +3,14 @@ setlocal
 cd /d "%~dp0"
 title Nebula Local - Configurar Telegram
 
-where python >nul 2>&1
-if errorlevel 1 (
-    echo ERRO: Python nao foi encontrado no PATH.
-    echo Instale o Python 3.10 e marque "Add Python to PATH".
+if not exist "python\python.exe" (
+    echo ERRO: python\python.exe nao encontrado.
+    echo A pasta "python" faz parte do repositorio e nao deve ser apagada.
     pause
     exit /b 1
 )
 
-python configurar_telegram.py
+"python\python.exe" configurar_telegram.py
 if errorlevel 1 (
     echo.
     echo A configuracao nao foi concluida.

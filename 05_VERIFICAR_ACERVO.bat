@@ -4,8 +4,13 @@ chcp 65001 >nul
 cd /d "%~dp0"
 title Nebula Local - Verificar Acervo SQLite
 
-set "PYTHON_EXE=python"
-if exist ".venv\Scripts\python.exe" set "PYTHON_EXE=.venv\Scripts\python.exe"
+if not exist "python\python.exe" (
+    echo ERRO: python\python.exe nao encontrado.
+    echo A pasta "python" faz parte do repositorio e nao deve ser apagada.
+    pause
+    exit /b 1
+)
+set "PYTHON_EXE=python\python.exe"
 
 if not exist "logs" mkdir "logs"
 
