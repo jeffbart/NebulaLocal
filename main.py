@@ -277,10 +277,22 @@ async def register_bot_commands(bot, mongo):
             removed += 1
         await message.reply_text(f"Uploads com falha removidos: {removed}.")
 
+    async def resume_command(_, message):
+        stats = await mongo.files.stats()
+        text = (
+            "📊 Resumo do NebulaFTP\n\n"
+            f"📥 Arquivos na fila: {stats['queued_files']}\n"
+            f"📁 Pastas no Telegram: {stats['folders']}\n"
+            f"📄 Arquivos no Telegram: {stats['files']}\n"
+            f"💾 Espaço ocupado no Telegram: {format_file_size(stats['total_size'])}"
+        )
+        await message.reply_text(text)
+
     async def help_command(_, message):
         await message.reply_text(
             "/queue — Mostra uploads em processamento, aguardando e com falha.\n\n"
             "/fetch — Envia um relatório completo dos uploads com falha.\n\n"
+            "/resume — Mostra um resumo: arquivos na fila, pastas e arquivos no Telegram e espaço ocupado.\n\n"
             "/clearfailed — Mostra o aviso de limpeza.\n"
             "/clearfailed confirmar — Remove todos os uploads com falha.\n\n"
             "/help — Mostra estas instruções."
@@ -288,6 +300,7 @@ async def register_bot_commands(bot, mongo):
 
     bot.add_handler(MessageHandler(queue_command, filters.command("queue")))
     bot.add_handler(MessageHandler(fetch_command, filters.command("fetch")))
+    bot.add_handler(MessageHandler(resume_command, filters.command("resume")))
     bot.add_handler(MessageHandler(clearfailed_command, filters.command("clearfailed")))
     bot.add_handler(MessageHandler(help_command, filters.command("help")))
 

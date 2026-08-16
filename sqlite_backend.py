@@ -273,6 +273,25 @@ class SQLiteFilesCollection:
     async def create_index(self, *args, **kwargs):
         return None
 
+    async def stats(self) -> dict[str, int]:
+        """Aggregate counts for the /resume report: queue size, folder/file
+        totals and bytes already archived on Telegram."""
+        with self.lock:
+            row = self.connection.execute(
+                """
+                SELECT
+                    SUM(CASE WHEN status IN ('staging', 'uploading') THEN 1 ELSE 0 END)
+                        AS queued_files,
+                    SUM(CASE WHEN type = 'dir' THEN 1 ELSE 0 END) AS folders,
+                    SUM(CASE WHEN type = 'file' AND status = 'completed' THEN 1 ELSE 0 END)
+                        AS files,
+                    SUM(CASE WHEN type = 'file' AND status = 'completed' THEN size ELSE 0 END)
+                        AS total_size
+                FROM nodes
+                """
+            ).fetchone()
+        return {key: row[key] or 0 for key in row.keys()}
+
 
 class SQLiteDatabase:
     def __init__(self, path: str | Path | None = None):
