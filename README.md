@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 0.3 seconds
+Output:
 <div align="center">
 
 <img src="img/logo_nebula_ftp.png" alt="Nebula Local" width="280">
@@ -11,7 +14,7 @@ Servidor FTP local com armazenamento de arquivos em um canal privado do Telegram
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/Windows-suportado-0078D4?logo=windows)](#instalação-no-windows)
 
-[Instalação](docs/INSTALLATION.md) · [Como usar](docs/USAGE.md) · [Telegram](docs/TELEGRAM_SETUP.md) · [Créditos](CREDITS.md)
+[Instalação](docs/INSTALLATION.md) · [Como usar](docs/USAGE.md) · [Telegram](docs/TELEGRAM_SETUP.md) · [Mapa mental](docs/MAPA_MENTAL.md) · [Créditos](CREDITS.md)
 
 </div>
 
@@ -243,3 +246,4 @@ Distribuído sob a [Licença MIT](LICENSE). Os avisos de autoria e licença do t
 Obrigado a **Samuel de Sousa Santos (`@samucamg`)** por criar e compartilhar publicamente o NebulaFTP, que tornou esta adaptação possível. Agradecemos também a RuslanUC, cujo aviso de copyright consta na licença herdada, e aos mantenedores das bibliotecas de código aberto utilizadas pelo projeto.
 
 Leia a atribuição completa em [CREDITS.md](CREDITS.md).
+
