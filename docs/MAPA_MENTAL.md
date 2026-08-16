@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.3 seconds
-Output:
 # Mapa mental do Nebula Local
 
 Este mapa resume a arquitetura, os fluxos de dados, a operação e os principais arquivos do projeto.
