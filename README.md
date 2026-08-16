@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.3 seconds
-Output:
 <div align="center">
 
 <img src="img/logo_nebula_ftp.png" alt="Nebula Local" width="280">
