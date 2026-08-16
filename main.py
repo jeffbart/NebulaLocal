@@ -277,6 +277,60 @@ async def register_bot_commands(bot, mongo):
             removed += 1
         await message.reply_text(f"Uploads com falha removidos: {removed}.")
 
+    async def clean_command(_, message):
+        command = (message.text or "").strip().split(maxsplit=1)
+        if len(command) < 2 or command[1].casefold() != "confirmar":
+            await message.reply_text(
+                "Aviso: esta acao remove do disco (se existir) e do SQLite todos "
+                "os uploads com falha.\n"
+                "Use /clean confirmar para continuar."
+            )
+            return
+
+        failed = await _documents_by_status(mongo, ("failed",))
+        if not failed:
+            await message.reply_text("Nenhum upload com falha para limpar.")
+            return
+
+        lines = ["🧹 Limpeza de uploads com falha", ""]
+        removed_disk = removed_sqlite = 0
+        for index, document in enumerate(failed, 1):
+            name = display_filename(document.get("name", "arquivo sem nome"))
+            local_path = document.get("local_path")
+
+            if local_path and local_path in ACTIVE_UPLOADS:
+                disk_status = "em uso, nao removido"
+            elif local_path and os.path.isfile(local_path):
+                try:
+                    os.remove(local_path)
+                    disk_status = "removido"
+                    removed_disk += 1
+                except OSError as exc:
+                    disk_status = f"erro ao remover ({exc})"
+                    logger.error("Nao foi possivel remover %s: %s", local_path, exc)
+            else:
+                disk_status = "nao havia arquivo local"
+
+            await mongo.files.delete_one({"_id": document["_id"]})
+            still_present = await mongo.files.find_one({"_id": document["_id"]})
+            if still_present is None:
+                sqlite_status = "removido"
+                removed_sqlite += 1
+            else:
+                sqlite_status = "ainda presente"
+
+            lines.append(f"{index}. {name}")
+            lines.append(f"— disco: {disk_status} | sqlite: {sqlite_status}")
+
+        lines.extend((
+            "",
+            f"Total: {len(failed)} | disco removido: {removed_disk} | "
+            f"sqlite removido: {removed_sqlite}",
+        ))
+        report = "\n".join(lines)
+        for start in range(0, len(report), 4000):
+            await message.reply_text(report[start:start + 4000])
+
     async def resume_command(_, message):
         stats = await mongo.files.stats()
         text = (
@@ -295,6 +349,9 @@ async def register_bot_commands(bot, mongo):
             "/resume — Mostra um resumo: arquivos na fila, pastas e arquivos no Telegram e espaço ocupado.\n\n"
             "/clearfailed — Mostra o aviso de limpeza.\n"
             "/clearfailed confirmar — Remove todos os uploads com falha.\n\n"
+            "/clean — Mostra o aviso de limpeza.\n"
+            "/clean confirmar — Remove uploads com falha do disco e do SQLite, "
+            "reportando item a item se cada um saiu do SQLite.\n\n"
             "/help — Mostra estas instruções."
         )
 
@@ -302,6 +359,7 @@ async def register_bot_commands(bot, mongo):
     bot.add_handler(MessageHandler(fetch_command, filters.command("fetch")))
     bot.add_handler(MessageHandler(resume_command, filters.command("resume")))
     bot.add_handler(MessageHandler(clearfailed_command, filters.command("clearfailed")))
+    bot.add_handler(MessageHandler(clean_command, filters.command("clean")))
     bot.add_handler(MessageHandler(help_command, filters.command("help")))
 
 def enable_utf8_ftp_commands(server):
