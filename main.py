@@ -60,7 +60,7 @@ def protected_upload_paths(queue=UPLOAD_QUEUE):
 
 # --- LOGGING ---
 log_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-log_handler = RotatingFileHandler('nebula.log', maxBytes=5*1024*1024, backupCount=2)
+log_handler = RotatingFileHandler('nebula.log', maxBytes=5*1024*1024, backupCount=2, encoding='utf-8')
 log_handler.setFormatter(log_formatter)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(log_formatter)
