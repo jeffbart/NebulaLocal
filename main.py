@@ -32,6 +32,7 @@ LOG_LEVEL = environ.get("LOG_LEVEL", "INFO")
 CHUNK_SIZE_MB = int(environ.get("CHUNK_SIZE_MB", 64))
 CHUNK_SIZE = CHUNK_SIZE_MB * 1024 * 1024
 MAX_RETRIES = int(environ.get("MAX_RETRIES", 5))
+UPLOAD_TIMEOUT = int(environ.get("UPLOAD_TIMEOUT_SECONDS", 600))
 MAX_STAGING_AGE = int(environ.get("MAX_STAGING_AGE", 3600))
 MAX_WORKERS = int(environ.get("MAX_WORKERS", 4))
 MIN_FREE_DISK_GB = float(environ.get("MIN_FREE_DISK_GB", 20))
@@ -68,6 +69,12 @@ logger = logging.getLogger("NebulaFTP")
 logger.setLevel(getattr(logging, LOG_LEVEL.upper(), logging.INFO))
 logger.addHandler(log_handler)
 logger.addHandler(console_handler)
+
+# O Pyrogram engole erros de conexao/upload via log.exception; sem este handler
+# eles nunca chegam ao nebula.log.
+pyrogram_logger = logging.getLogger("pyrogram")
+pyrogram_logger.setLevel(logging.WARNING)
+pyrogram_logger.addHandler(log_handler)
 
 # --- MÉTRICAS ---
 class Metrics:
@@ -506,6 +513,41 @@ async def folder_watcher(mongo):
 
         await asyncio.sleep(5)
 
+async def telegram_call(coro, timeout):
+    """Await a Telegram call but abandon it after `timeout` seconds.
+
+    wait_for() would also wait for the cancelled call to finish cleaning up,
+    which is exactly what never returns when the Pyrogram session is stuck.
+    """
+    task = asyncio.ensure_future(coro)
+    try:
+        done, _ = await asyncio.wait({task}, timeout=timeout)
+    except asyncio.CancelledError:
+        task.cancel()
+        raise
+    if not done:
+        task.cancel()
+        task.add_done_callback(lambda t: t.cancelled() or t.exception())
+        raise asyncio.TimeoutError(f"sem resposta do Telegram em {timeout}s")
+    return task.result()
+
+_reconnect_lock = asyncio.Lock()
+_reconnect_generation = 0
+
+async def reconnect_telegram(bot, seen_generation, worker_id):
+    """Restart the Pyrogram client once, even if several workers time out together."""
+    global _reconnect_generation
+    async with _reconnect_lock:
+        if _reconnect_generation != seen_generation:
+            return
+        logger.warning(f"🔌 [W{worker_id}] Reiniciando a conexão com o Telegram")
+        try:
+            await telegram_call(bot.restart(), 120)
+            logger.info("🔌 Conexão com o Telegram reiniciada")
+        except Exception as exc:
+            logger.error(f"❌ Falha ao reiniciar a conexão com o Telegram: {exc!r}")
+        _reconnect_generation += 1
+
 async def upload_worker(bot, target_chat_id, mongo, worker_id):
     logger.info(f"👷 Worker #{worker_id} Pronto")
 
@@ -615,16 +657,23 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         sent_msg = None
 
                         for attempt in range(1, MAX_RETRIES + 1):
+                            generation = _reconnect_generation
                             try:
                                 mem_file.seek(0)
-                                sent_msg = await bot.send_document(
-                                    chat_id=target_chat_id,
-                                    document=mem_file,
-                                    file_name=chunk_name,
-                                    force_document=True,
-                                    caption=telegram_caption
+                                sent_msg = await telegram_call(
+                                    bot.send_document(
+                                        chat_id=target_chat_id,
+                                        document=mem_file,
+                                        file_name=chunk_name,
+                                        force_document=True,
+                                        caption=telegram_caption
+                                    ),
+                                    UPLOAD_TIMEOUT,
                                 )
                                 break
+                            except asyncio.TimeoutError as e:
+                                logger.error(f"⏱️ [W{worker_id}] Upload travado ({attempt}): {e}")
+                                await reconnect_telegram(bot, generation, worker_id)
                             except FloodWait as e:
                                 w = e.value + 2; logger.warning(f"⏳ [W{worker_id}] FloodWait: {w}s")
                                 await asyncio.sleep(w)
@@ -714,10 +763,13 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                         f"Duração: {duration_minutes:.1f} minutos"
                     )
                     try:
-                        await bot.edit_message_caption(
-                            chat_id=target_chat_id,
-                            message_id=completion_message_id,
-                            caption=completed_caption,
+                        await telegram_call(
+                            bot.edit_message_caption(
+                                chat_id=target_chat_id,
+                                message_id=completion_message_id,
+                                caption=completed_caption,
+                            ),
+                            120,
                         )
                     except Exception as exc:
                         logger.warning(
@@ -728,10 +780,13 @@ async def upload_worker(bot, target_chat_id, mongo, worker_id):
                     try:
                         # Telegram renders an emoji-only message in the large
                         # style, providing a clear visual completion marker.
-                        await bot.send_message(
-                            chat_id=target_chat_id,
-                            text="✅",
-                            reply_to_message_id=completion_message_id,
+                        await telegram_call(
+                            bot.send_message(
+                                chat_id=target_chat_id,
+                                text="✅",
+                                reply_to_message_id=completion_message_id,
+                            ),
+                            120,
                         )
                     except Exception as exc:
                         logger.warning(
